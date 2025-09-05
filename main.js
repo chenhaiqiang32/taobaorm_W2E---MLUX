@@ -10,6 +10,8 @@ import BoxModel from "./src/components/boxModel.js";
 import { SceneManager } from "./src/components/sceneManager.js";
 import { CameraManager } from "./src/components/cameraManager.js";
 import { LightingManager } from "./src/components/lightingManager.js";
+import { getAdjustedLightConfig } from "./src/assets/lightConfig.js";
+import { getProjectEnvironmentConfig } from "./src/assets/enviromentConfig.js";
 import { BackgroundManager } from "./src/components/backgroundManager.js";
 import { AnimationManager } from "./src/components/animationManager.js";
 
@@ -33,6 +35,7 @@ function initScene() {
     height: window.innerHeight,
     enableShadows: true,
     enableAntialias: true,
+    environment: getProjectEnvironmentConfig() // 使用项目默认环境配置
   });
 
   // 将渲染器添加到DOM
@@ -40,16 +43,16 @@ function initScene() {
 
   // 初始化背景管理器
   backgroundManager.init(scene);
-  backgroundManager.createBackgroundSphere({
-    texturePath: "./sunny2.jpg",
-    radius: 500,
-    segments: 32,
-    shader: {
-      brightness: 1,
-      saturation: 1,
-      contrast: 1,
-    },
-  });
+  // backgroundManager.createBackgroundSphere({
+  //   texturePath: "./sunny2.jpg",
+  //   radius: 500,
+  //   segments: 32,
+  //   shader: {
+  //     brightness: 1,
+  //     saturation: 1,
+  //     contrast: 1,
+  //   },
+  // });
 
   // 初始化相机管理器
   cameraManager.init({
@@ -68,8 +71,11 @@ function initScene() {
     target: new THREE.Vector3(0, 0, 0),
   });
 
-  // 初始化灯光管理器
+  // // 初始化灯光管理器
   lightingManager.init(scene);
+  
+  // // 从配置文件加载灯光
+  lightingManager.loadFromConfig();
 
   return { scene, renderer };
 }
@@ -140,8 +146,9 @@ function setupModelAndScene(scene) {
       // 初始化地面效果
       groundEffect.initModel(groundCenter, radius);
 
-      // 设置灯光
-      lightingManager.setupForModel(boundingBox, center, radius, sceneOffset);
+      // 根据模型位置动态调整灯光配置
+      const adjustedLightConfig = getAdjustedLightConfig(center, radius, sceneOffset);
+      lightingManager.loadFromConfig(adjustedLightConfig);
 
       console.log("物体向右平移完成:", {
         物体偏移量: sceneOffset,
