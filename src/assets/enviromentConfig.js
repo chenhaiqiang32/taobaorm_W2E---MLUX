@@ -87,14 +87,14 @@ export const projectEnvironmentConfig = {
   type: "hdr", // 环境类型：disabled=禁用, room=RoomEnvironment, hdr=HDR, default=默认
   enabled: true, // 是否启用环境
   name: "project_default",
-  description: "项目默认配置 - HDR 环境贴图",
-  hdrPath: "./hdr/bg.hdr", // HDR 文件路径（验证必需）
+  description: "项目默认配置 - RoomEnvironment 环境贴图",
+  hdrPath: "./hdr/venice_sunset_1k.hdr", // HDR 文件路径（验证必需）
   fallbackPath: "./bg.jpg", // 备用文件路径
-  intensity: 1, // 环境强度
-  exposure: 1.0, // 曝光值
+  intensity: 1, // 环境强度（0=无效果，1=正常，>1=增强）
+  exposure: 1, // 曝光值（0=很暗，1=正常，>1=更亮）
   background: {
-    type: "hdr", // 背景类型：none=无, texture=纹理, hdr=HDR, color=纯色
-    path: "./hdr/bg.hdr", // 背景文件路径
+    type: "texture", // 背景类型：none=无, texture=纹理, hdr=HDR, color=纯色
+    path: "./sunny2.jpg", // 背景文件路径
   },
 };
 

@@ -147,11 +147,12 @@ export class SceneManager {
       case "room":
         // 使用 RoomEnvironment
         this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+        const roomIntensity = options.intensity !== undefined ? options.intensity : 0.8;
         this.scene.environment = this.pmremGenerator.fromScene(
           new RoomEnvironment(),
-          options.intensity || 0.8
+          roomIntensity
         ).texture;
-        console.log("已设置 RoomEnvironment，强度:", options.intensity || 0.8);
+        console.log("已设置 RoomEnvironment，强度:", roomIntensity);
         break;
 
       case "hdr":
@@ -195,12 +196,12 @@ export class SceneManager {
         console.log("HDR 加载成功:", texture);
         texture.mapping = THREE.EquirectangularReflectionMapping;
         texture.colorSpace = THREE.SRGBColorSpace;
-        texture.exposure = options.exposure || 2;
+        texture.exposure = options.exposure !== undefined ? options.exposure : 1.0;
         this.scene.background = texture;
 
         // 创建环境贴图副本，设置强度
         const envTexture = texture.clone();
-        envTexture.intensity = options.intensity || this.environmentConfig.intensity;
+        envTexture.intensity = options.intensity !== undefined ? options.intensity : this.environmentConfig.intensity;
         this.scene.environment = envTexture;
 
         console.log("HDR 天空贴图设置完成，强度:", envTexture.intensity);
@@ -234,12 +235,12 @@ export class SceneManager {
           console.log("备用方案加载成功");
           texture.mapping = THREE.EquirectangularReflectionMapping;
           texture.colorSpace = THREE.SRGBColorSpace;
-          texture.exposure = options.exposure || 0.2;
+          texture.exposure = options.exposure !== undefined ? options.exposure : 1.0;
           this.scene.background = texture;
 
           // 创建环境贴图副本，设置强度
           const envTexture = texture.clone();
-          envTexture.intensity = options.intensity || this.environmentConfig.intensity;
+          envTexture.intensity = options.intensity !== undefined ? options.intensity : this.environmentConfig.intensity;
           this.scene.environment = envTexture;
         },
         undefined,
