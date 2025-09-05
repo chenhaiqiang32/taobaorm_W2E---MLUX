@@ -88,7 +88,7 @@ export const projectEnvironmentConfig = {
   enabled: true, // 是否启用环境
   name: "project_default",
   description: "项目默认配置 - HDR 环境贴图",
-  hdrPath: "./hdr/bg.hdr", // HDR 文件路径（验证必需）
+  hdrPath: "./hdr/Dutch-Sky_0168_4k.hdr", // HDR 文件路径（验证必需）
   fallbackPath: "./bg.jpg", // 备用文件路径
   intensity: 1, // 环境强度
   exposure: 1.0, // 曝光值
