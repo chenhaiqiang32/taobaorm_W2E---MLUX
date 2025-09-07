@@ -90,10 +90,23 @@ export function loadModel(scene, modelIndex = 0) {
 }
 
 // 新增：加载所有模型的函数
-export function loadAllModels(scene) {
+export function loadAllModels(scene, raycasterManager = null) {
   const loadPromises = modelPaths.map((path, index) => loadModel(scene, index));
 
-  return Promise.all(loadPromises);
+  return Promise.all(loadPromises).then(models => {
+    // 如果提供了射线检测管理器，自动注册模型
+    if (raycasterManager) {
+      const modelsToRegister = models.map((modelData, index) => ({
+        name: modelNames[index],
+        model: modelData.model
+      }));
+      
+      raycasterManager.registerModels(modelsToRegister);
+      console.log(`🎯 已自动注册 ${modelsToRegister.length} 个模型到射线检测系统`);
+    }
+    
+    return models;
+  });
 }
 
 // 新增：获取可用模型信息的函数

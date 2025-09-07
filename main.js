@@ -14,6 +14,7 @@ import { getAdjustedLightConfig } from "./src/assets/lightConfig.js";
 import { getProjectEnvironmentConfig } from "./src/assets/enviromentConfig.js";
 import { BackgroundManager } from "./src/components/backgroundManager.js";
 import { AnimationManager } from "./src/components/animationManager.js";
+import { RaycasterManager } from "./src/components/raycasterManager.js";
 
 // 创建管理器实例
 const sceneManager = new SceneManager();
@@ -21,6 +22,7 @@ const cameraManager = new CameraManager();
 const lightingManager = new LightingManager();
 const backgroundManager = new BackgroundManager();
 const animationManager = new AnimationManager();
+const raycasterManager = new RaycasterManager();
 
 // 全局变量
 let groundEffect = null;
@@ -71,6 +73,9 @@ function initScene() {
     target: new THREE.Vector3(0, 0, 0),
   });
 
+  // 初始化射线检测管理器
+  raycasterManager.init(scene, cameraManager.getCamera(), renderer);
+
   // // 初始化灯光管理器
   lightingManager.init(scene);
   
@@ -87,7 +92,7 @@ function setupModelAndScene(scene) {
   // 定义物体向右偏移量
   const sceneOffset = new THREE.Vector3(4, 0, 0);
 
-  loadAllModels(scene)
+  loadAllModels(scene, raycasterManager)
     .then((models) => {
       // 获取第一个模型（如果只加载一个模型的话）
       const {
@@ -150,6 +155,9 @@ function setupModelAndScene(scene) {
       const adjustedLightConfig = getAdjustedLightConfig(center, radius, sceneOffset);
       lightingManager.loadFromConfig(adjustedLightConfig);
 
+      // 设置射线检测事件监听器
+      raycasterManager.setupEventListeners('all');
+
       console.log("物体向右平移完成:", {
         物体偏移量: sceneOffset,
         物体新位置: model.position,
@@ -176,18 +184,18 @@ function setupModelAndScene(scene) {
  * 设置事件监听器
  */
 function setupEventListeners(renderer) {
-  // 点击事件监听器，打印相机位置
-  renderer.domElement.addEventListener("click", (event) => {
-    const cameraInfo = cameraManager.getCameraInfo();
-    if (cameraInfo) {
-      console.log("=== 当前相机位置信息 ===");
-      console.log("相机位置 (Position):", cameraInfo.position);
-      console.log("控制器目标 (Target):", cameraInfo.target);
-      console.log("相机旋转 (Rotation):", cameraInfo.rotation);
-      console.log("相机距离目标:", cameraInfo.distance);
-      console.log("========================");
-    }
-  });
+  // 点击事件监听器，打印相机位置（已由射线检测系统处理）
+  // renderer.domElement.addEventListener("click", (event) => {
+  //   const cameraInfo = cameraManager.getCameraInfo();
+  //   if (cameraInfo) {
+  //     console.log("=== 当前相机位置信息 ===");
+  //     console.log("相机位置 (Position):", cameraInfo.position);
+  //     console.log("控制器目标 (Target):", cameraInfo.target);
+  //     console.log("相机旋转 (Rotation):", cameraInfo.rotation);
+  //     console.log("相机距离目标:", cameraInfo.distance);
+  //     console.log("========================");
+  //   }
+  // });
 
   // 动画控制按钮事件监听器
   document.addEventListener("DOMContentLoaded", () => {
