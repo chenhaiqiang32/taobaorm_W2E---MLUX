@@ -1,0 +1,166 @@
+/* CSS2D标签样式 */
+
+.css2d-label {
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #00ff88;
+  border-radius: 8px;
+  padding: 12px;
+  color: white;
+  font-family: 'Arial', sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  min-width: 200px;
+  max-width: 300px;
+  pointer-events: none;
+  user-select: none;
+  transform: translate(-50%, -100%);
+}
+
+/* 标题模板样式 */
+.css2d-title {
+  text-align: center;
+  min-width: 150px;
+  max-width: 200px;
+}
+
+.css2d-title .label-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #00ff88;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+/* 信息模板样式 */
+.css2d-info {
+  border-color: #0088ff;
+}
+
+.css2d-info .label-header {
+  border-bottom: 1px solid #0088ff;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+}
+
+.css2d-info .label-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #0088ff;
+  text-shadow: 0 0 10px rgba(0, 136, 255, 0.5);
+}
+
+.css2d-info .label-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.css2d-info .config-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+}
+
+.css2d-info .config-label {
+  color: #cccccc;
+  font-weight: 500;
+}
+
+.css2d-info .config-value {
+  color: #ffffff;
+  font-weight: bold;
+  text-align: right;
+}
+
+/* 详细模板样式 */
+.css2d-detail {
+  border-color: #ff8800;
+  min-width: 250px;
+  max-width: 350px;
+}
+
+.css2d-detail .detail-header {
+  border-bottom: 2px solid #ff8800;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+}
+
+.css2d-detail .detail-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ff8800;
+  text-shadow: 0 0 10px rgba(255, 136, 0, 0.5);
+  margin: 0;
+}
+
+.css2d-detail .detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.css2d-detail .detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 136, 0, 0.2);
+}
+
+.css2d-detail .detail-item:last-child {
+  border-bottom: none;
+}
+
+.css2d-detail .detail-label {
+  color: #ffaa44;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.css2d-detail .detail-value {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* 悬停效果 */
+.css2d-label:hover {
+  transform: translate(-50%, -100%) scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* 动画效果 */
+.css2d-label {
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -80%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .css2d-label {
+    font-size: 12px;
+    padding: 8px;
+    min-width: 150px;
+    max-width: 200px;
+  }
+  
+  .css2d-detail {
+    min-width: 200px;
+    max-width: 250px;
+  }
+}

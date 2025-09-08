@@ -15,6 +15,9 @@ import { getProjectEnvironmentConfig } from "./src/assets/enviromentConfig.js";
 import { BackgroundManager } from "./src/components/backgroundManager.js";
 import { AnimationManager } from "./src/components/animationManager.js";
 import { RaycasterManager } from "./src/components/raycasterManager.js";
+import { CSS2DManager } from "./src/components/css2dManager.js";
+import { MessageManager } from "./src/components/messageManager.js";
+import { setCSS2DManager, setMessageManager } from "./src/assets/raycasterConfig.js";
 
 // 创建管理器实例
 const sceneManager = new SceneManager();
@@ -23,6 +26,11 @@ const lightingManager = new LightingManager();
 const backgroundManager = new BackgroundManager();
 const animationManager = new AnimationManager();
 const raycasterManager = new RaycasterManager();
+const css2dManager = new CSS2DManager();
+const messageManager = new MessageManager();
+
+// 设置管理器引用到射线检测配置
+setCSS2DManager(css2dManager);
 
 // 全局变量
 let groundEffect = null;
@@ -75,6 +83,19 @@ function initScene() {
 
   // 初始化射线检测管理器
   raycasterManager.init(scene, cameraManager.getCamera(), renderer);
+
+  // 初始化CSS2D标签管理器
+  css2dManager.init(scene, cameraManager.getCamera(), {
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+
+  // 初始化消息管理器
+  messageManager.init();
+  console.log('✅ MessageManager初始化完成，准备接收消息');
+  
+  // 在MessageManager初始化后设置引用
+  setMessageManager(messageManager);
 
   // // 初始化灯光管理器
   lightingManager.init(scene);
@@ -232,6 +253,7 @@ function setupEventListeners(renderer) {
 
     cameraManager.updateAspect(width, height);
     sceneManager.resize(width, height);
+    css2dManager.resize(width, height);
   });
 
   // 消息监听
@@ -265,6 +287,9 @@ function animate(time) {
   if (renderer && camera) {
     renderer.render(sceneManager.getScene(), camera);
   }
+
+  // 渲染CSS2D标签
+  css2dManager.render();
 }
 
 /**
