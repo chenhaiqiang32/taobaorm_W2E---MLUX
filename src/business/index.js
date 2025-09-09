@@ -8,19 +8,30 @@ export {
   processDeviceData,
   getDeviceData,
   getAllDeviceData,
-  clearDeviceData
+  clearDeviceData,
+  getDeviceModelData,
+  getAllDeviceModelData,
+  setDeviceModelData,
+  removeDeviceModelData,
+  testDeviceDataFormat
 } from './deviceDataManager.js';
 
 // 设备配置管理
 export {
-  DEVICE_TYPES,
-  DEVICE_MODEL_MAPPING,
-  DEVICE_ID_RANGES,
-  getModelNameByDeviceId,
+  DEVICE_TYPES_LIST,
+  DEVICE_GROUPS_TYPES_LIST,
   addDeviceMapping,
   removeDeviceMapping,
   getAllDeviceMappings,
-  getDeviceIdsByModelName
+  getDeviceIdsByModelName,
+  addDeviceToTypesList,
+  addDeviceGroupToTypesList,
+  clearDeviceTypesList,
+  clearDeviceGroupsTypesList,
+  getDeviceTypesList,
+  getDeviceGroupsTypesList,
+  findDeviceByName,
+  findDeviceGroupByName
 } from './deviceConfig.js';
 
 // 消息处理器管理
@@ -28,3 +39,9 @@ export {
   MessageHandlerManager,
   messageHandlerManager
 } from './messageHandlerManager.js';
+
+// 场景分析器
+export {
+  SceneAnalyzer,
+  sceneAnalyzer
+} from './sceneAnalyzer.js';

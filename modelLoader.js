@@ -3,6 +3,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { modelPaths, modelNames } from "./src/assets/modelList.js";
 import config from "./src/assets/config.js";
+import { sceneAnalyzer } from "./src/business/index.js";
 
 export function loadModel(scene, modelIndex = 0) {
   return new Promise((resolve, reject) => {
@@ -90,7 +91,7 @@ export function loadModel(scene, modelIndex = 0) {
 }
 
 // 新增：加载所有模型的函数
-export function loadAllModels(scene, raycasterManager = null) {
+export function loadAllModels(scene, raycasterManager = null, enableSceneAnalysis = true) {
   const loadPromises = modelPaths.map((path, index) => loadModel(scene, index));
 
   return Promise.all(loadPromises).then(models => {
@@ -103,6 +104,11 @@ export function loadAllModels(scene, raycasterManager = null) {
       
       raycasterManager.registerModels(modelsToRegister);
       console.log(`🎯 已自动注册 ${modelsToRegister.length} 个模型到射线检测系统`);
+    }
+    
+    // 如果启用了场景分析，分析equipment模型
+    if (enableSceneAnalysis) {
+      analyzeEquipmentModel(models);
     }
     
     return models;
@@ -224,4 +230,149 @@ export function autoSetupCameraAndControls(cameraManager, loadedModels) {
     console.error("❌ 自动设置相机和控制器时出错:", error);
     return null;
   }
+}
+
+/**
+ * 分析equipment模型结构
+ * @param {Array} models - 已加载的模型数组
+ * @returns {Object} 分析结果
+ */
+export function analyzeEquipmentModel(models) {
+  console.log('🔍 开始分析equipment模型结构...');
+  
+  // 从模型数组中查找equipment模型
+  const equipmentModelIndex = modelNames.indexOf('equipment');
+  
+  if (equipmentModelIndex === -1) {
+    console.warn('⚠️ 未找到equipment模型名称');
+    return {
+      success: false,
+      error: '未找到equipment模型名称',
+      devices: [],
+      groups: []
+    };
+  }
+  
+  const equipmentModelData = models[equipmentModelIndex];
+  
+  if (!equipmentModelData || !equipmentModelData.model) {
+    console.warn('⚠️ equipment模型数据无效');
+    return {
+      success: false,
+      error: 'equipment模型数据无效',
+      devices: [],
+      groups: []
+    };
+  }
+  
+  // 准备模型数据
+  const modelData = {
+    name: 'equipment',
+    model: equipmentModelData.model
+  };
+  
+  console.log(`✅ 找到equipment模型数据，模型名称: ${modelData.name}`);
+  
+  try {
+    const analysisResult = sceneAnalyzer.analyzeScene(modelData);
+    
+    if (analysisResult.success) {
+      console.log('✅ Equipment模型分析完成');
+      console.log(`📊 分析结果:`);
+      console.log(`  - 设备数量: ${analysisResult.totalDevices}`);
+      console.log(`  - 设备组数量: ${analysisResult.totalGroups}`);
+      
+      // 输出设备列表
+      if (analysisResult.devices.length > 0) {
+        console.log('📦 发现的设备:');
+        analysisResult.devices.forEach((device, index) => {
+          console.log(`  ${index + 1}. ${device.name} ${device.isGrouped ? `(组: ${device.groupName})` : '(独立设备)'}`);
+        });
+      }
+      
+      // 输出设备组列表
+      if (analysisResult.groups.length > 0) {
+        console.log('📦 发现的设备组:');
+        analysisResult.groups.forEach((group, index) => {
+          console.log(`  ${index + 1}. ${group.name} (包含 ${group.deviceCount} 个设备)`);
+        });
+      }
+      
+      return analysisResult;
+    } else {
+      console.warn('⚠️ Equipment模型分析失败:', analysisResult.error);
+      return analysisResult;
+    }
+  } catch (error) {
+    console.error('❌ 分析equipment模型时出错:', error);
+    return {
+      success: false,
+      error: error.message,
+      devices: [],
+      groups: []
+    };
+  }
+}
+
+/**
+ * 获取场景分析结果
+ * @returns {Object} 分析结果摘要
+ */
+export function getSceneAnalysisResults() {
+  return {
+    summary: sceneAnalyzer.getAnalysisSummary(),
+    devices: sceneAnalyzer.getDeviceTypesList ? sceneAnalyzer.getDeviceTypesList() : [],
+    groups: sceneAnalyzer.getDeviceGroupsTypesList ? sceneAnalyzer.getDeviceGroupsTypesList() : []
+  };
+}
+
+/**
+ * 重置场景分析
+ */
+export function resetSceneAnalysis() {
+  sceneAnalyzer.reset();
+  console.log('🔄 场景分析已重置');
+}
+
+/**
+ * 测试模型查找功能
+ * @param {Array} models - 已加载的模型数组
+ * @param {string} modelName - 要查找的模型名称
+ */
+export function testModelFinding(models, modelName = 'equipment') {
+  console.log(`🧪 测试模型查找功能 - 查找模型: "${modelName}"`);
+  
+  // 列出所有可用模型名称
+  console.log('📋 所有可用模型名称:');
+  modelNames.forEach((name, index) => {
+    console.log(`  ${index + 1}. "${name}"`);
+  });
+  
+  // 从模型数组中查找指定模型
+  const modelIndex = modelNames.indexOf(modelName);
+  
+  if (modelIndex === -1) {
+    console.log(`❌ 未找到模型名称: "${modelName}"`);
+    console.log('💡 建议检查模型名称是否正确，或使用上面列出的可用模型名称');
+    return null;
+  }
+  
+  const modelData = models[modelIndex];
+  
+  if (!modelData || !modelData.model) {
+    console.log(`❌ 模型数据无效: "${modelName}"`);
+    return null;
+  }
+  
+  console.log(`✅ 成功找到模型: "${modelName}"`);
+  console.log(`   - 模型名称: "${modelName}"`);
+  console.log(`   - 模型类型: ${modelData.model.type}`);
+  console.log(`   - 子对象数量: ${modelData.model.children.length}`);
+  console.log(`   - 模型路径: ${modelData.modelPath}`);
+  
+  return {
+    name: modelName,
+    model: modelData.model,
+    modelData: modelData
+  };
 }

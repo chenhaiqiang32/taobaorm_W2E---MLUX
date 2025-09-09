@@ -226,7 +226,6 @@ export class MessageManager {
     }
     this.onMessage('deviceData', (data) => {
       if (handlers.updateDeviceData) {
-        console.log('调用handlers.updateDeviceData');
         handlers.updateDeviceData(data);
       } else {
         console.log('handlers.updateDeviceData不存在');
