@@ -37,7 +37,9 @@ export {
   getDeviceTypesList,
   getDeviceGroupsTypesList,
   findDeviceByName,
-  findDeviceGroupByName
+  findDeviceGroupByName,
+  createGroupLabels,
+  createGroupLabel
 } from './deviceConfig.js';
 
 // 消息处理器管理

@@ -20,6 +20,7 @@ import { MessageManager } from "./src/components/messageManager.js";
 import { PostprocessingManager } from "./src/components/postprocessingManager.js";
 import { setCSS2DManager, setMessageManager, setPostprocessingManager } from "./src/assets/raycasterConfig.js";
 import { handleDeviceClick, getCurrentSelectedDevice } from "./src/business/deviceDataManager.js";
+import { createGroupLabels } from "./src/business/index.js";
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 // 创建管理器实例
@@ -292,6 +293,10 @@ function setupModelAndScene(scene) {
       const availableModels = getAvailableModels();
       console.log("🎯 控制中心配置:", availableModels.controlCenterConfig);
       console.log("🎯 控制中心模型:", availableModels.controlCenter);
+
+      // 创建设备组CSS2D标签
+      console.log("🏷️ 开始创建设备组标签...");
+      createGroupLabels(css2dManager);
     })
     .catch((error) => {
       console.error("Failed to setup model and controls:", error);

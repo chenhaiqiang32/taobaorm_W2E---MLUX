@@ -252,6 +252,34 @@ export class CSS2DManager {
         return div;
       }
     });
+
+    // 模板4：低调的设备组标签模板
+    this.templates.set('group', {
+      create: (data) => {
+        const div = document.createElement('div');
+        
+        // 使用低调的内联样式
+        div.style.cssText = `
+          background: rgba(0, 0, 0, 0.4);
+          color: rgba(255, 255, 255, 0.7);
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 10px;
+          pointer-events: none;
+          user-select: none;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          min-width: 60px;
+          text-align: center;
+          font-family: Arial, sans-serif;
+          backdrop-filter: blur(2px);
+        `;
+        
+        div.innerHTML = `
+          <div style="font-weight: normal; color: rgba(255, 255, 255, 0.8);">${data.title || '组'}</div>
+        `;
+        return div;
+      }
+    });
   }
 
   /**
@@ -260,7 +288,7 @@ export class CSS2DManager {
    * @param {Object} data - 标签数据 {title, configs}
    * @param {Object} options - 选项 {position, center, type}
    */
-  createLabel(id, data, options = {}) {
+  createLabel(id, data, options = {},center = {x: 0.5, y: 1}) {
     // 移除已存在的标签
     this.removeLabel(id);
 
@@ -295,7 +323,7 @@ export class CSS2DManager {
         options.center.z + offset.z
       );
     }
-    label.center.set(0.5, 1);
+    label.center.set(center.x, center.y);
     // 设置可见性
     if (options.visible !== undefined) {
       label.visible = options.visible;
