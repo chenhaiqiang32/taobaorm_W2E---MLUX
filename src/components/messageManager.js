@@ -39,38 +39,32 @@ export class MessageManager {
     if (this.targetOrigin !== '*' && event.origin !== this.targetOrigin) {
       return;
     }
-    console.log('MessageManager收到原始事件:', event);
+    
     const { type, data } = event.data || {};
     
-    console.log('消息类型:', type);
-    console.log('消息数据:', data);
-    console.log('当前注册的处理器:', Array.from(this.messageHandlers.keys()));
-    console.log('messageHandlers Map大小:', this.messageHandlers.size);
-    
     if (!type) {
-      console.log('消息类型为空，忽略');
       return;
     }
     
     // 查找对应的处理器
     const handler = this.messageHandlers.get(type);
-    console.log('查找处理器结果:', handler);
     
     if (handler) {
-      console.log('MessageManager找到对应的处理器:', handler);
       try {
         const result = handler(data, event);
         
         // 如果处理器返回了结果，发送响应
         if (result !== undefined) {
-          this.postMessage('response', result, id);
+          this.postMessage('response', result);
         }
       } catch (error) {
         this.postMessage('error', { 
           message: error.message, 
           type: type 
-        }, id);
+        });
       }
+    } else {
+      console.warn(`未找到消息类型 "${type}" 的处理器`);
     }
   }
 
@@ -80,16 +74,12 @@ export class MessageManager {
    * @param {Function} handler - 处理函数
    */
   onMessage(type, handler) {
-    console.log('onMessage被调用，类型:', type, '处理器:', handler);
-    
     if (typeof handler !== 'function') {
-      console.log('处理器不是函数，忽略注册');
+      console.warn('处理器不是函数，忽略注册');
       return;
     }
 
     this.messageHandlers.set(type, handler);
-    console.log('处理器注册成功，类型:', type);
-    console.log('当前messageHandlers内容:', Array.from(this.messageHandlers.entries()));
   }
 
   /**
@@ -224,6 +214,8 @@ export class MessageManager {
       console.log('MessageManager未初始化，无法注册处理器');
       return;
     }
+    
+    // 注册设备数据处理器
     this.onMessage('deviceData', (data) => {
       if (handlers.updateDeviceData) {
         handlers.updateDeviceData(data);
@@ -231,6 +223,35 @@ export class MessageManager {
         console.log('handlers.updateDeviceData不存在');
       }
     });
+    
+    // 注册机械臂控制处理器
+    this.onMessage('robotArmControl', (data) => {
+      if (handlers.robotArmControl) {
+        handlers.robotArmControl(data);
+      } else {
+        console.log('handlers.robotArmControl不存在');
+      }
+    });
+    
+    // 注册机械臂停止处理器
+    this.onMessage('robotArmStop', (data) => {
+      if (handlers.robotArmStop) {
+        handlers.robotArmStop(data);
+      } else {
+        console.log('handlers.robotArmStop不存在');
+      }
+    });
+    
+    // 注册机械臂重置处理器
+    this.onMessage('robotArmReset', (data) => {
+      if (handlers.robotArmReset) {
+        handlers.robotArmReset(data);
+      } else {
+        console.log('handlers.robotArmReset不存在');
+      }
+    });
+    
+    console.log('📝 所有raycaster消息处理器注册完成');
   }
 
   /**

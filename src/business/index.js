@@ -51,3 +51,21 @@ export {
   SceneAnalyzer,
   sceneAnalyzer
 } from './sceneAnalyzer.js';
+
+// 机械臂管理器
+export {
+  RobotArmManager,
+  robotArmManager
+} from './robotArmManager.js';
+
+// 路径管理器
+export {
+  PathManager,
+  pathManager
+} from './pathManager.js';
+
+// 移动控制器
+export {
+  MovementController,
+  movementController
+} from './movementController.js';

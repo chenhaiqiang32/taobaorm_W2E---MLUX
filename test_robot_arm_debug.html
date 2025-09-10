@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机械臂调试测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .debug-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .debug-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .debug-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 机械臂调试测试</h1>
+        
+        <div class="debug-section">
+            <h3>📊 系统状态</h3>
+            <div id="systemStatus" class="debug-info">正在检查系统状态...</div>
+            <button onclick="checkSystemStatus()">刷新状态</button>
+        </div>
+        
+        <div class="debug-section">
+            <h3>🛤️ 路径信息</h3>
+            <div id="pathInfo" class="debug-info">正在检查路径信息...</div>
+            <button onclick="checkPathInfo()">刷新路径</button>
+        </div>
+        
+        <div class="debug-section">
+            <h3>🤖 机械臂信息</h3>
+            <div id="robotArmInfo" class="debug-info">正在检查机械臂信息...</div>
+            <button onclick="checkRobotArmInfo()">刷新机械臂</button>
+        </div>
+        
+        <div class="debug-section">
+            <h3>🎬 测试移动</h3>
+            <button onclick="testMovement()">测试机械臂移动</button>
+            <button onclick="stopMovement()">停止移动</button>
+            <div id="movementLog" class="debug-info">移动日志将显示在这里...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        // 模拟调试函数
+        function checkSystemStatus() {
+            const status = document.getElementById('systemStatus');
+            status.textContent = `系统状态检查:
+- 页面加载: ✅
+- 调试模式: ✅
+- 时间: ${new Date().toLocaleString()}`;
+        }
+        
+        function checkPathInfo() {
+            const pathInfo = document.getElementById('pathInfo');
+            pathInfo.textContent = `路径信息检查:
+- 路径管理器: 需要在实际项目中检查
+- 路径数量: 需要在实际项目中检查
+- 路径名称: 需要在实际项目中检查
+
+请在实际项目中使用以下代码检查:
+console.log('路径管理器状态:', pathManager.isInitialized);
+console.log('路径数量:', pathManager.paths.size);
+console.log('路径名称:', pathManager.getAllPathNames());`;
+        }
+        
+        function checkRobotArmInfo() {
+            const robotArmInfo = document.getElementById('robotArmInfo');
+            robotArmInfo.textContent = `机械臂信息检查:
+- 机械臂管理器: 需要在实际项目中检查
+- 机械臂数量: 需要在实际项目中检查
+- 机械臂ID: 需要在实际项目中检查
+
+请在实际项目中使用以下代码检查:
+console.log('机械臂管理器状态:', robotArmManager.isInitialized);
+console.log('机械臂数量:', robotArmManager.robotArms.size);
+console.log('机械臂ID:', robotArmManager.getAllRobotArmIds());`;
+        }
+        
+        function testMovement() {
+            const movementLog = document.getElementById('movementLog');
+            movementLog.textContent = `测试移动:
+- 发送消息: {model: '03', line: 'D-M'}
+- 检查控制台输出
+- 观察机械臂移动
+
+请在实际项目中使用以下代码测试:
+// 在message.html中发送消息
+window.parent.postMessage({
+    type: 'robotArmControl',
+    data: {model: '03', line: 'D-M'}
+}, '*');`;
+        }
+        
+        function stopMovement() {
+            const movementLog = document.getElementById('movementLog');
+            movementLog.textContent = `停止移动:
+- 发送停止消息: {model: '03'}
+- 检查控制台输出
+
+请在实际项目中使用以下代码停止:
+// 在message.html中发送消息
+window.parent.postMessage({
+    type: 'robotArmStop',
+    data: {model: '03'}
+}, '*');`;
+        }
+        
+        // 初始化
+        checkSystemStatus();
+        checkPathInfo();
+        checkRobotArmInfo();
+    </script>
+</body>
+</html>

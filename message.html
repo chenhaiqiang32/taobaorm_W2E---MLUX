@@ -262,6 +262,37 @@
                 </div>
             </div>
 
+            <!-- 机械臂控制区域 -->
+            <div class="section">
+                <h2>🤖 机械臂路径控制</h2>
+                <div class="form-group">
+                    <label for="robotArmModel">机械臂编号:</label>
+                    <input type="text" id="robotArmModel" placeholder="例如: 03" value="03">
+                </div>
+                <div class="form-group">
+                    <label for="robotArmPath">路径名称:</label>
+                    <input type="text" id="robotArmPath" placeholder="例如: D-M" value="D-M">
+                </div>
+                <div class="form-group">
+                    <label for="robotArmDuration">移动时间 (毫秒):</label>
+                    <input type="number" id="robotArmDuration" placeholder="5000" value="5000" min="1000" max="30000">
+                </div>
+                <div class="form-group">
+                    <label for="robotArmEasing">缓动函数:</label>
+                    <select id="robotArmEasing">
+                        <option value="linear">线性</option>
+                        <option value="easeIn">缓入</option>
+                        <option value="easeOut">缓出</option>
+                        <option value="easeInOut" selected>缓入缓出</option>
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-success" onclick="sendRobotArmControl()">开始移动</button>
+                    <button class="btn btn-warning" onclick="sendRobotArmStop()">停止移动</button>
+                    <button class="btn btn-info" onclick="sendRobotArmReset()">重置位置</button>
+                </div>
+            </div>
+
 
             <!-- 3D场景iframe -->
             <div class="section">
@@ -317,6 +348,98 @@
                 alert('数据格式错误: ' + error.message);
             }
         }
+
+        // 发送机械臂控制消息
+        function sendRobotArmControl() {
+            try {
+                const model = document.getElementById('robotArmModel').value.trim();
+                const line = document.getElementById('robotArmPath').value.trim();
+                const duration = parseInt(document.getElementById('robotArmDuration').value);
+                const easing = document.getElementById('robotArmEasing').value;
+                
+                // 验证输入
+                if (!model) {
+                    throw new Error('请输入机械臂编号');
+                }
+                if (!line) {
+                    throw new Error('请输入路径名称');
+                }
+                if (isNaN(duration) || duration < 1000 || duration > 30000) {
+                    throw new Error('移动时间必须在1000-30000毫秒之间');
+                }
+                
+                // 构建控制数据
+                const controlData = {
+                    model: model,
+                    line: line,
+                    options: {
+                        duration: duration,
+                        easing: easing,
+                        loop: false,
+                        reverse: false
+                    }
+                };
+                
+                console.log('🤖 发送机械臂控制消息:', controlData);
+                sendMessage('robotArmControl', controlData);
+                
+                // 显示成功消息
+                showMessage(`机械臂 ${model} 开始沿路径 ${line} 移动`, 'success');
+                
+            } catch (error) {
+                alert('机械臂控制数据错误: ' + error.message);
+            }
+        }
+
+        // 停止机械臂移动
+        function sendRobotArmStop() {
+            try {
+                const model = document.getElementById('robotArmModel').value.trim();
+                
+                if (!model) {
+                    throw new Error('请输入机械臂编号');
+                }
+                
+                // 构建停止控制数据
+                const controlData = {
+                    model: model,
+                    action: 'stop'
+                };
+                
+                console.log('⏹️ 发送机械臂停止消息:', controlData);
+                sendMessage('robotArmStop', controlData);
+                
+                showMessage(`机械臂 ${model} 移动已停止`, 'info');
+                
+            } catch (error) {
+                alert('停止机械臂失败: ' + error.message);
+            }
+        }
+
+        // 重置机械臂位置
+        function sendRobotArmReset() {
+            try {
+                const model = document.getElementById('robotArmModel').value.trim();
+                
+                if (!model) {
+                    throw new Error('请输入机械臂编号');
+                }
+                
+                // 构建重置控制数据
+                const controlData = {
+                    model: model,
+                    action: 'reset'
+                };
+                
+                console.log('🔄 发送机械臂重置消息:', controlData);
+                sendMessage('robotArmReset', controlData);
+                
+                showMessage(`机械臂 ${model} 已重置到原始位置`, 'info');
+                
+            } catch (error) {
+                alert('重置机械臂失败: ' + error.message);
+            }
+        }
         // 发送消息到iframe
         function sendMessage(type, data) {
             if (!sceneFrame.contentWindow) {
@@ -345,6 +468,48 @@
                 connectionStatus.textContent = '未连接';
                 connectionStatus.className = 'status disconnected';
             }
+        }
+
+        // 显示消息提示
+        function showMessage(message, type = 'info') {
+            // 创建消息元素
+            const messageEl = document.createElement('div');
+            messageEl.className = `status ${type}`;
+            messageEl.textContent = message;
+            messageEl.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 1000;
+                padding: 10px 15px;
+                border-radius: 5px;
+                font-size: 14px;
+                max-width: 300px;
+                word-wrap: break-word;
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            // 添加动画样式
+            if (!document.getElementById('messageAnimation')) {
+                const style = document.createElement('style');
+                style.id = 'messageAnimation';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(messageEl);
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                if (messageEl.parentNode) {
+                    messageEl.parentNode.removeChild(messageEl);
+                }
+            }, 3000);
         }
     </script>
 </body>

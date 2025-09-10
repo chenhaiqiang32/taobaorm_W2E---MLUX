@@ -41,18 +41,20 @@ try {
 
   console.log("模型目录中的所有文件:", allFiles);
 
-  // 第三步：过滤出 .glb 模型文件
-  // 只保留以 .glb 结尾的文件（不区分大小写）
-  const modelFiles = allFiles.filter((file) => file.endsWith(".glb"));
+  // 第三步：过滤出模型文件（支持 .glb 和 .obj 格式）
+  // 只保留以 .glb 或 .obj 结尾的文件（不区分大小写）
+  const modelFiles = allFiles.filter((file) => 
+    file.toLowerCase().endsWith(".glb") || file.toLowerCase().endsWith(".obj")
+  );
 
   // 检查是否找到了模型文件
   if (modelFiles.length === 0) {
-    console.warn("警告: 没有找到 .glb 文件");
-    console.warn("请确保 models/ 目录中包含 .glb 格式的模型文件");
+    console.warn("警告: 没有找到 .glb 或 .obj 文件");
+    console.warn("请确保 models/ 目录中包含 .glb 或 .obj 格式的模型文件");
   }
 
   // 第四步：生成模型访问路径数组
-  // 路径格式: ./models/filename.glb
+  // 路径格式: ./models/filename.glb 或 ./models/filename.obj
   // 这些路径相对于 public 目录，可以直接在 Three.js 中使用
   const modelPaths = modelFiles.map((file) => `./models/${file}`);
 
@@ -71,17 +73,17 @@ export const modelFiles = ${JSON.stringify(modelFiles, null, 2)};
 
 // 模型访问路径数组（包含相对路径）
 // 用途：在 Three.js 中加载模型、生成下载链接等
-// 路径格式: ./models/filename.glb
+// 路径格式: ./models/filename.glb 或 ./models/filename.obj
 export const modelPaths = ${JSON.stringify(modelPaths, null, 2)};
 
 // 模型总数
 // 用途：循环遍历、验证索引范围、显示统计信息等
 export const modelCount = ${modelFiles.length};
 
-// 模型名称数组（去除 .glb 后缀）
+// 模型名称数组（去除文件后缀）
 // 用途：显示友好的模型名称、生成选择器选项等
 export const modelNames = ${JSON.stringify(
-    modelFiles.map((file) => file.replace(".glb", "")),
+    modelFiles.map((file) => file.replace(/\.(glb|obj)$/i, "")),
     null,
     2
   )};
@@ -106,7 +108,7 @@ export const modelNames = ${JSON.stringify(
   console.log("📋 模型总数:", modelFiles.length);
   console.log(
     "📋 模型名称:",
-    modelFiles.map((file) => file.replace(".glb", ""))
+    modelFiles.map((file) => file.replace(/\.(glb|obj)$/i, ""))
   );
   console.log("=== 模型列表生成完成 ===");
 } catch (error) {

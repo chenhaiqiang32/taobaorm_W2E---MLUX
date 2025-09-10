@@ -28,7 +28,7 @@ export class CameraManager {
       fov = 75,
       aspect = window.innerWidth / window.innerHeight,
       near = 0.1,
-      far = 1000,
+      far = 1000000,
       position = this.defaultPosition,
       target = this.defaultTarget,
     } = options;
@@ -111,8 +111,8 @@ export class CameraManager {
     }
 
     // 更新相机参数，确保近远平面合适
-    this.camera.near = distance * 0.01;
-    this.camera.far = distance * 100;
+    // this.camera.near = distance * 0.01;
+    // this.camera.far = distance * 100;
     this.camera.updateProjectionMatrix();
 
     return {

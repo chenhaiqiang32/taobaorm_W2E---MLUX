@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { modelPaths, modelNames } from "./src/assets/modelList.js";
 import config from "./src/assets/config.js";
-import { sceneAnalyzer } from "./src/business/index.js";
+import { sceneAnalyzer, robotArmManager, pathManager } from "./src/business/index.js";
 
 export function loadModel(scene, modelIndex = 0) {
   return new Promise((resolve, reject) => {
@@ -17,26 +18,22 @@ export function loadModel(scene, modelIndex = 0) {
       return;
     }
 
-    const loader = new GLTFLoader();
-
-    // 创建 DRACOLoader 实例
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath("./draco/");
-
-    // 将 DRACOLoader 实例设置给 GLTFLoader
-    loader.setDRACOLoader(dracoLoader);
-
     const modelPath = modelPaths[modelIndex];
     const modelName = modelNames[modelIndex];
+    const isOBJFile = modelPath.toLowerCase().endsWith('.obj');
+    
     console.log(
-      `正在加载模型: ${modelPath} (索引: ${modelIndex}, 名称: ${modelName})`
+      `正在加载模型: ${modelPath} (索引: ${modelIndex}, 名称: ${modelName}, 格式: ${isOBJFile ? 'OBJ' : 'GLB'})`
     );
 
-    loader.load(
-      modelPath, // 使用模型路径数组中的路径
-      function (gltf) {
-        const model = gltf.scene;
-
+    if (isOBJFile) {
+      // 使用OBJLoader加载OBJ文件
+      const loader = new OBJLoader();
+      
+      loader.load(
+        modelPath, // 使用模型路径数组中的路径
+        function (object) {
+          const model = object;
         // 计算模型的包围盒
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
@@ -44,12 +41,9 @@ export function loadModel(scene, modelIndex = 0) {
 
         const radius = Math.max(size.x, size.y, size.z);
 
-        // 创建动画混合器但不自动播放
+        // OBJ文件没有动画，设置mixer为null
         let mixer = null;
-        if (gltf.animations && gltf.animations.length > 0) {
-          mixer = new THREE.AnimationMixer(model);
-          // 不自动播放动画，由外部控制
-        }
+        let animations = [];
 
         // 恢复原始材质，确保模型正常显示
         model.traverse((child) => {
@@ -72,7 +66,7 @@ export function loadModel(scene, modelIndex = 0) {
           size: size, // 包围盒大小
           radius: radius, // 包围盒半径
           mixer: mixer, // 返回动画混合器
-          animations: gltf.animations, // 返回动画数据
+          animations: animations, // 返回动画数据
           modelPath: modelPath, // 返回模型路径
           modelIndex: modelIndex, // 返回模型索引
           modelName: modelName, // 返回模型名称
@@ -83,18 +77,85 @@ export function loadModel(scene, modelIndex = 0) {
         console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
       },
       function (error) {
-        console.error("加载模型时出错:", error);
+        console.error("加载OBJ模型时出错:", error);
         reject(error);
       }
     );
+    } else {
+      // 使用GLTFLoader加载GLB文件
+      const loader = new GLTFLoader();
+
+      // 创建 DRACOLoader 实例
+      const dracoLoader = new DRACOLoader();
+      dracoLoader.setDecoderPath("./draco/");
+
+      // 将 DRACOLoader 实例设置给 GLTFLoader
+      loader.setDRACOLoader(dracoLoader);
+
+      loader.load(
+        modelPath, // 使用模型路径数组中的路径
+        function (gltf) {
+          const model = gltf.scene;
+
+          // 计算模型的包围盒
+          const box = new THREE.Box3().setFromObject(model);
+          const center = box.getCenter(new THREE.Vector3());
+          const size = box.getSize(new THREE.Vector3());
+
+          const radius = Math.max(size.x, size.y, size.z);
+
+          // 创建动画混合器但不自动播放
+          let mixer = null;
+          if (gltf.animations && gltf.animations.length > 0) {
+            mixer = new THREE.AnimationMixer(model);
+            // 不自动播放动画，由外部控制
+          }
+
+          // 恢复原始材质，确保模型正常显示
+          model.traverse((child) => {
+            if (child.isMesh) {
+              child.visible = true;
+            }
+          });
+
+          // 将模型添加到场景
+          scene.add(model);
+
+          // 检查是否为控制中心模型
+          const isControlCenter = modelName === config.defaultCameraPosition.name;
+
+          // 返回模型信息
+          resolve({
+            model: model,
+            boundingBox: box,
+            center: center, // 包围盒中心
+            size: size, // 包围盒大小
+            radius: radius, // 包围盒半径
+            mixer: mixer, // 返回动画混合器
+            animations: gltf.animations, // 返回动画数据
+            modelPath: modelPath, // 返回模型路径
+            modelIndex: modelIndex, // 返回模型索引
+            modelName: modelName, // 返回模型名称
+            isControlCenter: isControlCenter, // 是否为控制中心模型
+          });
+        },
+        function (xhr) {
+          console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+        },
+        function (error) {
+          console.error("加载GLB模型时出错:", error);
+          reject(error);
+        }
+      );
+    }
   });
 }
 
 // 新增：加载所有模型的函数
-export function loadAllModels(scene, raycasterManager = null, enableSceneAnalysis = true) {
+export async function loadAllModels(scene, raycasterManager = null, enableSceneAnalysis = true) {
   const loadPromises = modelPaths.map((path, index) => loadModel(scene, index));
 
-  return Promise.all(loadPromises).then(models => {
+  return Promise.all(loadPromises).then(async models => {
     // 如果提供了射线检测管理器，自动注册模型
     if (raycasterManager) {
       const modelsToRegister = models.map((modelData, index) => ({
@@ -106,9 +167,10 @@ export function loadAllModels(scene, raycasterManager = null, enableSceneAnalysi
       console.log(`🎯 已自动注册 ${modelsToRegister.length} 个模型到射线检测系统`);
     }
     
-    // 如果启用了场景分析，分析equipment模型
+    // 如果启用了场景分析，分析equipment和line模型
     if (enableSceneAnalysis) {
       analyzeEquipmentModel(models);
+      await analyzeLineModel(models);
     }
     
     return models;
@@ -298,6 +360,15 @@ export function analyzeEquipmentModel(models) {
         });
       }
       
+      // 初始化机械臂管理器
+      console.log('🤖 初始化机械臂管理器...');
+      const robotArmInitResult = robotArmManager.init(equipmentModelData.model);
+      if (robotArmInitResult) {
+        console.log('✅ 机械臂管理器初始化成功');
+      } else {
+        console.warn('⚠️ 机械臂管理器初始化失败');
+      }
+      
       return analysisResult;
     } else {
       console.warn('⚠️ Equipment模型分析失败:', analysisResult.error);
@@ -375,4 +446,124 @@ export function testModelFinding(models, modelName = 'equipment') {
     model: modelData.model,
     modelData: modelData
   };
+}
+
+/**
+ * 分析Line模型结构并初始化路径管理器
+ * @param {Array} models - 模型数据数组
+ * @returns {Promise<Object>} 分析结果
+ */
+export async function analyzeLineModel(models) {
+  console.log('🛤️ 开始分析Line模型结构...');
+  // 从模型数组中查找line模型
+  const lineModelIndex = modelNames.indexOf('line');
+  
+  if (lineModelIndex === -1) {
+    console.warn('⚠️ 未找到line模型名称');
+    return {
+      success: false,
+      error: '未找到line模型名称',
+      paths: []
+    };
+  }
+  
+  const lineModelData = models[lineModelIndex];
+  
+  if (!lineModelData || !lineModelData.model) {
+    console.warn('⚠️ line模型数据无效');
+    return {
+      success: false,
+      error: 'line模型数据无效',
+      paths: []
+    };
+  }
+  
+  console.log(`✅ 找到line模型数据，模型名称: line`);
+  
+  try {
+    // 检查是否为OBJ文件
+    const isOBJFile = lineModelData.modelPath.toLowerCase().endsWith('.obj');
+    
+    if (isOBJFile) {
+      // 对于OBJ文件，使用init方法初始化
+      console.log('🛤️ 检测到OBJ文件，初始化路径管理器...');
+      const pathInitResult = await pathManager.init(lineModelData.modelPath);
+      
+      if (pathInitResult) {
+        console.log('✅ OBJ路径解析成功');
+        
+        // 获取路径信息
+        const pathNames = pathManager.getAllPathNames();
+        const pathData = pathManager.getAllPathData();
+        
+        console.log(`📊 路径分析结果:`);
+        console.log(`  - 路径数量: ${pathNames.length}`);
+        console.log(`  - 路径名称: [${pathNames.join(', ')}]`);
+        
+        if (pathData.length > 0) {
+          console.log('🛤️ 发现的路径:');
+          pathData.forEach((path, index) => {
+            console.log(`  ${index + 1}. ${path.name} (长度: ${path.length.toFixed(2)}, 点数: ${path.points.length})`);
+          });
+        }
+        
+        return {
+          success: true,
+          paths: pathData,
+          pathNames: pathNames,
+          totalPaths: pathNames.length
+        };
+      } else {
+        console.warn('⚠️ OBJ路径解析失败，未找到路径数据');
+        return {
+          success: false,
+          error: 'OBJ路径解析失败，未找到路径数据',
+          paths: []
+        };
+      }
+    } else {
+      // 对于GLB文件，使用init方法初始化
+      console.log('🛤️ 初始化路径管理器...');
+      const pathInitResult = await pathManager.init(lineModelData.model);
+      if (pathInitResult) {
+        console.log('✅ 路径管理器初始化成功');
+        
+        // 获取路径信息
+        const pathNames = pathManager.getAllPathNames();
+        const pathData = pathManager.getAllPathData();
+        
+        console.log(`📊 路径分析结果:`);
+        console.log(`  - 路径数量: ${pathNames.length}`);
+        console.log(`  - 路径名称: [${pathNames.join(', ')}]`);
+        
+        if (pathData.length > 0) {
+          console.log('🛤️ 发现的路径:');
+          pathData.forEach((path, index) => {
+            console.log(`  ${index + 1}. ${path.name} (长度: ${path.length.toFixed(2)}, 点数: ${path.points.length})`);
+          });
+        }
+        
+        return {
+          success: true,
+          paths: pathData,
+          pathNames: pathNames,
+          totalPaths: pathNames.length
+        };
+      } else {
+        console.warn('⚠️ 路径管理器初始化失败');
+        return {
+          success: false,
+          error: '路径管理器初始化失败',
+          paths: []
+        };
+      }
+    }
+  } catch (error) {
+    console.error('❌ 分析line模型时出错:', error);
+    return {
+      success: false,
+      error: error.message,
+      paths: []
+    };
+  }
 }

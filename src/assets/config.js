@@ -13,8 +13,16 @@ const config = {
 
     // 当 type 为 "position" 时，使用以下配置
     // type: "position",
-    // position: { x: 0, y: 14, z: 24 },
-    // lookAt: { x: 0, y: 0, z: 0 },
+    // position: {
+    //   x: -1137.245,
+    //   y: -300.007,
+    //   z: -583.249,
+    // },
+    // lookAt: {
+    //   x: -1137.245,
+    //   y: -311.007,
+    //   z: -583.249,
+    // },
   },
 };
 
