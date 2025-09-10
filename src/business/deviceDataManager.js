@@ -5,6 +5,13 @@
 
 // 导入设备配置管理
 import { DEVICE_MODEL_DATA_MAP, DEVICE_TYPES_LIST } from './deviceConfig.js';
+// 导入后处理配置
+import { getDeviceOutlineConfig, applyDeviceTypeToOutlinePass } from '../assets/postprocessingConfig.js';
+
+// 全局状态管理
+let currentSelectedDevice = null;
+let postprocessingManager = null;
+let css2dManager = null;
 
 /**
  * 处理多设备数据的业务逻辑
@@ -76,6 +83,272 @@ export function processDeviceData(deviceDataArray, css2dManager) {
 }
 
 /**
+ * 设置管理器实例
+ * @param {Object} postprocessingMgr - 后处理管理器实例
+ * @param {Object} css2dMgr - CSS2D管理器实例
+ */
+export function setManagers(postprocessingMgr, css2dMgr) {
+  postprocessingManager = postprocessingMgr;
+  css2dManager = css2dMgr;
+  console.log('🔧 设备数据管理器已设置后处理和CSS2D管理器');
+}
+
+/**
+ * 向上递归查找匹配的设备对象
+ * @param {THREE.Object3D} object - 开始查找的对象
+ * @returns {THREE.Object3D|null} 匹配的设备对象
+ */
+function findDeviceInHierarchy(object) {
+  if (!object) {
+    return null;
+  }
+
+  // 获取DEVICE_TYPES_LIST中的所有设备名称
+  const deviceNames = DEVICE_TYPES_LIST.map(device => device.name);
+  console.log(`🔍 查找设备层次结构，可用设备:`, deviceNames);
+
+  let currentObject = object;
+  let depth = 0;
+  const maxDepth = 10; // 防止无限递归
+
+  while (currentObject && depth < maxDepth) {
+    console.log(`🔍 检查对象 (深度 ${depth}):`, currentObject.name, currentObject);
+    
+    // 检查当前对象的名称是否在DEVICE_TYPES_LIST中
+    if (currentObject.name && deviceNames.includes(currentObject.name)) {
+      console.log(`✅ 找到匹配的设备: ${currentObject.name}`);
+      return currentObject;
+    }
+    
+    // 向上查找父级对象
+    currentObject = currentObject.parent;
+    depth++;
+  }
+
+  console.warn(`❌ 在层次结构中未找到匹配的设备，最大深度: ${maxDepth}`);
+  return null;
+}
+
+/**
+ * 处理设备鼠标悬停事件
+ * @param {THREE.Object3D} hoveredObject - 被悬停的对象
+ */
+export function handleDeviceHover(hoveredObject) {
+  console.log(`🎯 处理设备悬停:`, hoveredObject);
+  
+  if (!postprocessingManager) {
+    console.warn('后处理管理器未设置');
+    return;
+  }
+
+  // 向上递归查找匹配的设备
+  const hoverDevice = findDeviceInHierarchy(hoveredObject);
+  
+  if (!hoverDevice) {
+    console.warn('未找到匹配的设备对象:', hoveredObject);
+    return;
+  }
+
+  const deviceName = hoverDevice.name;
+  console.log(`✅ 找到悬停设备: ${deviceName}`);
+
+  // 应用设备高亮效果（不显示标签，只高亮）
+  applyDeviceOutline(hoverDevice, deviceName);
+  
+  // 设置鼠标样式为小手
+  document.body.style.cursor = 'pointer';
+}
+
+/**
+ * 处理设备鼠标移出事件
+ * @param {THREE.Object3D} exitedObject - 移出的对象
+ */
+export function handleDeviceExit(exitedObject) {
+  console.log(`🎯 处理设备移出:`, exitedObject);
+  
+  if (!postprocessingManager) {
+    console.warn('后处理管理器未设置');
+    return;
+  }
+
+  // 清除高亮效果
+  postprocessingManager.clearHighlight();
+  
+  // 恢复默认鼠标样式
+  document.body.style.cursor = 'default';
+}
+
+/**
+ * 处理设备点击事件
+ * @param {THREE.Object3D} clickedObject - 被点击的对象
+ */
+export function handleDeviceClick(clickedObject) {
+  console.log(`🎯 处理设备点击:`, clickedObject);
+  
+  if (!postprocessingManager || !css2dManager) {
+    console.warn('后处理管理器或CSS2D管理器未设置', {
+      postprocessingManager: !!postprocessingManager,
+      css2dManager: !!css2dManager
+    });
+    return;
+  }
+
+  // 向上递归查找匹配的设备
+  const clickDevice = findDeviceInHierarchy(clickedObject);
+  
+  if (!clickDevice) {
+    console.warn(`未找到匹配的设备对象:`, clickedObject);
+    return;
+  }
+
+  console.log(`✅ 找到匹配的设备: ${clickDevice.name}`, clickDevice);
+
+  // 如果点击的是同一个设备，则取消选择
+  if (currentSelectedDevice && currentSelectedDevice.name === clickDevice.name) {
+    clearDeviceSelection();
+    return;
+  }
+
+  // 清除之前的选择
+  clearDeviceSelection();
+
+  // 设置新的选择
+  currentSelectedDevice = {
+    name: clickDevice.name,
+    object: clickDevice,
+    data: DEVICE_MODEL_DATA_MAP[clickDevice.name] || null,
+  };
+
+  // 应用outline效果
+  applyDeviceOutline(clickDevice, clickDevice.name);
+
+  // 显示设备标签
+  showDeviceLabel(clickDevice.name);
+
+  console.log(`🎯 设备 ${clickDevice.name} 已被选中，应用outline效果和显示标签`);
+}
+
+/**
+ * 应用设备outline效果
+ * @param {THREE.Object3D} object - 要应用outline的对象
+ * @param {string} deviceName - 设备名称
+ */
+function applyDeviceOutline(object, deviceName) {
+  if (!postprocessingManager) {
+    console.warn('后处理管理器未设置，无法应用outline效果');
+    return;
+  }
+
+  // 获取设备类型（从设备名称推断）
+  const deviceType = getDeviceTypeFromName(deviceName);
+  console.log(`🎨 应用设备outline效果: ${deviceName} (类型: ${deviceType})`);
+  
+  // 应用设备类型对应的outline配置
+  const outlinePass = postprocessingManager.getOutlinePass();
+  if (outlinePass) {
+    applyDeviceTypeToOutlinePass(outlinePass, deviceType);
+    
+    // 调试：输出当前outline配置
+    console.log('🔍 当前outline配置:', {
+      visibleEdgeColor: outlinePass.visibleEdgeColor.getHexString(),
+      hiddenEdgeColor: outlinePass.hiddenEdgeColor.getHexString(),
+      edgeGlow: outlinePass.edgeGlow,
+      edgeThickness: outlinePass.edgeThickness,
+      edgeStrength: outlinePass.edgeStrength,
+      downSampleRatio: outlinePass.downSampleRatio,
+      pulsePeriod: outlinePass.pulsePeriod
+    });
+    
+    console.log('✅ outline配置已应用');
+  } else {
+    console.warn('❌ 无法获取outline通道');
+  }
+
+  // 高亮对象
+  postprocessingManager.highlightObjects([object]);
+  console.log('✅ 对象已添加到高亮列表');
+}
+
+/**
+ * 显示设备标签
+ * @param {string} deviceName - 设备名称
+ */
+function showDeviceLabel(deviceName) {
+  if (!css2dManager) return;
+
+  // 从DEVICE_TYPES_LIST中找到设备信息
+  const device = DEVICE_TYPES_LIST.find(d => d.name === deviceName);
+  if (!device || !device.boundingBox) {
+    console.warn(`未找到设备 ${deviceName} 的包围盒信息`);
+    return;
+  }
+
+  // 获取设备数据
+  const deviceData = DEVICE_MODEL_DATA_MAP[deviceName];
+  if (!deviceData) {
+    console.warn(`未找到设备 ${deviceName} 的数据`);
+    return;
+  }
+
+  // 显示标签（设置为可见）
+  const labelId = `${deviceName}_info`;
+  const existingLabel = css2dManager.getLabel(labelId);
+  
+  if (existingLabel) {
+    // 如果标签已存在，设置为可见
+    css2dManager.setLabelVisible(labelId, true);
+    console.log(`🏷️ 显示设备 ${deviceName} 的标签`);
+  } else {
+    // 如果标签不存在，创建新标签
+    insertLabelAboveBoundingBox(device, deviceData, css2dManager);
+    // 创建后立即设置为可见
+    css2dManager.setLabelVisible(labelId, true);
+    console.log(`🏷️ 创建并显示设备 ${deviceName} 的标签`);
+  }
+}
+
+/**
+ * 清除设备选择
+ */
+export function clearDeviceSelection() {
+  if (!currentSelectedDevice) return;
+
+  // 清除outline效果
+  if (postprocessingManager) {
+    postprocessingManager.clearHighlight();
+  }
+
+  // 隐藏标签
+  if (css2dManager && currentSelectedDevice.name) {
+    const labelId = `${currentSelectedDevice.name}_info`;
+    css2dManager.setLabelVisible(labelId, false);
+  }
+
+  console.log(`🧹 清除设备 ${currentSelectedDevice.name} 的选择状态`);
+  currentSelectedDevice = null;
+}
+
+/**
+ * 从设备名称推断设备类型
+ * @param {string} deviceName - 设备名称
+ * @returns {string} 设备类型
+ */
+function getDeviceTypeFromName(deviceName) {
+  if (deviceName.includes('equipment')) return 'equipment';
+  if (deviceName.includes('structure')) return 'structure';
+  if (deviceName.includes('line')) return 'line';
+  return 'default';
+}
+
+/**
+ * 获取当前选中的设备
+ * @returns {Object|null} 当前选中的设备信息
+ */
+export function getCurrentSelectedDevice() {
+  return currentSelectedDevice;
+}
+
+/**
  * 在包围盒上方插入label
  * @param {Object} device - 设备信息对象
  * @param {Object} data - 设备数据
@@ -101,11 +374,12 @@ function insertLabelAboveBoundingBox(device, data, css2dManager) {
     configs: data.configs || []
   };
   
-  // 创建或更新标签
+  // 创建或更新标签（默认不显示）
   const labelId = `${name}_info`;
   css2dManager.createLabel(labelId, labelData, {
     position: labelPosition,
-    type: 'info'
+    type: 'info',
+    visible: false  // 默认不显示
   });
   
   // console.log(`🏷️ 标签已插入到设备 ${name} 上方:`, labelPosition);

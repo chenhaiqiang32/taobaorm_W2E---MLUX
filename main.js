@@ -17,7 +17,9 @@ import { AnimationManager } from "./src/components/animationManager.js";
 import { RaycasterManager } from "./src/components/raycasterManager.js";
 import { CSS2DManager } from "./src/components/css2dManager.js";
 import { MessageManager } from "./src/components/messageManager.js";
-import { setCSS2DManager, setMessageManager } from "./src/assets/raycasterConfig.js";
+import { PostprocessingManager } from "./src/components/postprocessingManager.js";
+import { setCSS2DManager, setMessageManager, setPostprocessingManager } from "./src/assets/raycasterConfig.js";
+import { handleDeviceClick, getCurrentSelectedDevice } from "./src/business/deviceDataManager.js";
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 // 创建管理器实例
@@ -29,6 +31,7 @@ const animationManager = new AnimationManager();
 const raycasterManager = new RaycasterManager();
 const css2dManager = new CSS2DManager();
 const messageManager = new MessageManager();
+const postprocessingManager = new PostprocessingManager();
 
 // 简单的CSS2D渲染器（用于测试）
 let simpleCSS2DRenderer = null;
@@ -177,12 +180,19 @@ function initScene() {
     initSimpleCSS2D(scene, cameraManager.getCamera());
   }
 
+  // 初始化后处理管理器
+  postprocessingManager.init(renderer, scene, cameraManager.getCamera());
+  console.log('✅ PostprocessingManager初始化完成');
+
   // 初始化消息管理器
   messageManager.init();
   console.log('✅ MessageManager初始化完成，准备接收消息');
   
   // 在MessageManager初始化后设置引用
   setMessageManager(messageManager);
+  
+  // 设置后处理管理器引用
+  setPostprocessingManager(postprocessingManager);
 
   // // 初始化灯光管理器
   lightingManager.init(scene);
@@ -341,17 +351,11 @@ function setupEventListeners(renderer) {
     cameraManager.updateAspect(width, height);
     sceneManager.resize(width, height);
     css2dManager.resize(width, height);
+    postprocessingManager.resize(width, height);
     
     // 调整简单CSS2D渲染器大小
     if (DEBUG_CSS2D && simpleCSS2DRenderer) {
       simpleCSS2DRenderer.setSize(width, height);
-    }
-  });
-
-  // 消息监听
-  window.addEventListener("message", (event) => {
-    const { cmd, params } = event.data || {};
-    if (cmd === "init" && params) {
     }
   });
 }
@@ -373,11 +377,19 @@ function animate(time) {
   // 更新动画
   animationManager.updateWithClock();
 
-  // 渲染场景
+  // 渲染场景（使用后处理管理器）
   const renderer = sceneManager.getRenderer();
   const camera = cameraManager.getCamera();
-  if (renderer && camera) {
-    renderer.render(sceneManager.getScene(), camera);
+  const scene = sceneManager.getScene();
+  
+  if (renderer && camera && scene) {
+    // 使用后处理管理器渲染（包含outline效果）
+    postprocessingManager.render();
+  } else {
+    // 如果后处理管理器未正确初始化，使用普通渲染
+    if (renderer && camera && scene) {
+      renderer.render(scene, camera);
+    }
   }
 
   // 渲染CSS2D标签
@@ -408,302 +420,3 @@ function main() {
 
 // 启动应用
 main();
-
-// 添加全局测试函数
-window.testSimpleCSS2D = () => {
-  console.log('🧪 测试简单CSS2D功能...');
-  if (simpleCSS2DRenderer) {
-    console.log('✅ 简单CSS2D渲染器存在');
-    console.log('📊 测试标签数量:', testLabels.length);
-    
-    // 移动测试标签
-    testLabels.forEach((label, index) => {
-      const time = Date.now() * 0.001;
-      const angle = time + index * Math.PI / 3;
-      const radius = 8;
-      
-      label.position.x = Math.cos(angle) * radius;
-      label.position.z = Math.sin(angle) * radius;
-      label.position.y = 3 + Math.sin(time * 2 + index) * 0.5;
-    });
-    
-    console.log('✅ 测试标签已移动');
-  } else {
-    console.log('❌ 简单CSS2D渲染器不存在');
-  }
-};
-
-window.checkSimpleCSS2DStatus = () => {
-  console.log('🔍 简单CSS2D状态检查:');
-  console.log('  - 渲染器:', !!simpleCSS2DRenderer);
-  console.log('  - DOM元素:', !!simpleCSS2DRenderer?.domElement);
-  console.log('  - 测试标签数量:', testLabels.length);
-  
-  if (simpleCSS2DRenderer?.domElement) {
-    const rect = simpleCSS2DRenderer.domElement.getBoundingClientRect();
-    console.log('  - DOM元素尺寸:', rect.width, 'x', rect.height);
-    console.log('  - DOM元素位置:', rect.left, rect.top);
-  }
-};
-
-window.testCSS2DManager = () => {
-  console.log('🧪 测试CSS2DManager功能...');
-  console.log('📊 CSS2DManager标签数量:', css2dManager.labels.size);
-  console.log('📊 CSS2DManager场景子对象数量:', css2dManager.scene.children.length);
-  
-  // 检查测试标签
-  const testLabel = css2dManager.getLabel('simple_test');
-  if (testLabel) {
-    console.log('✅ 测试标签存在:', testLabel);
-    console.log('📍 测试标签位置:', testLabel.position);
-  } else {
-    console.log('❌ 测试标签不存在');
-  }
-  
-  // 移动测试标签
-  if (testLabel) {
-    const time = Date.now() * 0.001;
-    testLabel.position.x = Math.sin(time) * 5;
-    testLabel.position.z = Math.cos(time) * 5;
-    testLabel.position.y = 5 + Math.sin(time * 2) * 0.5;
-    console.log('✅ 测试标签已移动');
-  }
-};
-
-window.enableCSS2DDebug = () => {
-  DEBUG_CSS2D = true;
-  css2dManager.enableDebugMode();
-  console.log('🔧 CSS2D调试模式已启用');
-};
-
-window.disableCSS2DDebug = () => {
-  DEBUG_CSS2D = false;
-  css2dManager.disableDebugMode();
-  console.log('🔧 CSS2D调试模式已禁用');
-};
-
-window.checkCSS2DSceneConsistency = () => {
-  console.log('🔍 检查CSS2D场景一致性:');
-  console.log('  - CSS2DManager内部场景:', !!css2dManager.scene);
-  console.log('  - CSS2DManager内部相机:', !!css2dManager.camera);
-  console.log('  - SceneManager场景:', !!sceneManager.getScene());
-  console.log('  - CameraManager相机:', !!cameraManager.getCamera());
-  
-  console.log('  - 场景是否相同:', css2dManager.scene === sceneManager.getScene());
-  console.log('  - 相机是否相同:', css2dManager.camera === cameraManager.getCamera());
-  
-  if (css2dManager.scene && sceneManager.getScene()) {
-    console.log('  - CSS2DManager场景子对象数量:', css2dManager.scene.children.length);
-    console.log('  - SceneManager场景子对象数量:', sceneManager.getScene().children.length);
-  }
-};
-
-window.checkDeviceTypesList = async () => {
-  console.log('🔍 检查DEVICE_TYPES_LIST状态:');
-  
-  // 动态导入deviceConfig
-  const { DEVICE_TYPES_LIST } = await import('./src/business/deviceConfig.js');
-  
-  console.log('  - 设备数量:', DEVICE_TYPES_LIST.length);
-  console.log('  - 设备列表:', DEVICE_TYPES_LIST.map(d => ({
-    name: d.name,
-    hasBoundingBox: !!d.boundingBox,
-    boundingBoxCenter: d.boundingBox?.center
-  })));
-  
-  // 检查CSS2DManager中的标签
-  console.log('  - CSS2DManager标签数量:', css2dManager.labels.size);
-  console.log('  - CSS2DManager标签列表:', Array.from(css2dManager.labels.keys()));
-  
-  return {
-    deviceCount: DEVICE_TYPES_LIST.length,
-    labelCount: css2dManager.labels.size,
-    devices: DEVICE_TYPES_LIST,
-    labels: Array.from(css2dManager.labels.keys())
-  };
-};
-
-window.testBusinessLogic = async () => {
-  console.log('🧪 测试业务逻辑...');
-  
-  // 动态导入相关模块
-  const { processDeviceData } = await import('./src/business/deviceDataManager.js');
-  const { DEVICE_TYPES_LIST } = await import('./src/business/deviceConfig.js');
-  
-  // 创建测试数据
-  const testDeviceData = [
-    {
-      deviceid: "Mesh_equipment_mtl",
-      data: {
-        title: "测试设备",
-        configs: [
-          { label: "状态", value: "正常" },
-          { label: "温度", value: "25°C" }
-        ]
-      }
-    }
-  ];
-  
-  console.log('📊 测试前状态:');
-  console.log('  - DEVICE_TYPES_LIST数量:', DEVICE_TYPES_LIST.length);
-  console.log('  - CSS2DManager标签数量:', css2dManager.labels.size);
-  
-  // 处理测试数据
-  processDeviceData(testDeviceData, css2dManager);
-  
-  console.log('📊 测试后状态:');
-  console.log('  - DEVICE_TYPES_LIST数量:', DEVICE_TYPES_LIST.length);
-  console.log('  - CSS2DManager标签数量:', css2dManager.labels.size);
-  console.log('  - CSS2DManager标签列表:', Array.from(css2dManager.labels.keys()));
-  
-  return {
-    before: { deviceCount: DEVICE_TYPES_LIST.length, labelCount: css2dManager.labels.size },
-    after: { deviceCount: DEVICE_TYPES_LIST.length, labelCount: css2dManager.labels.size }
-  };
-};
-
-window.checkAllLabels = () => {
-  console.log('🔍 检查所有标签状态:');
-  
-  const camera = cameraManager.getCamera();
-  console.log('📷 相机位置:', `(${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
-  
-  console.log('📊 CSS2DManager标签:');
-  css2dManager.labels.forEach((label, id) => {
-    const distance = camera.position.distanceTo(label.position);
-    console.log(`  - 标签ID: ${id}`);
-    console.log(`    - 位置: (${label.position.x.toFixed(2)}, ${label.position.y.toFixed(2)}, ${label.position.z.toFixed(2)})`);
-    console.log(`    - 距离相机: ${distance.toFixed(2)}`);
-    console.log(`    - 可见性: ${label.visible}`);
-    console.log(`    - 元素:`, label.element);
-    console.log(`    - 元素文本:`, label.element?.textContent || label.element?.innerText);
-  });
-  
-  console.log('📊 场景中的CSS2D对象:');
-  const css2dObjects = css2dManager.scene.children.filter(child => child.isCSS2DObject);
-  console.log(`  - CSS2D对象数量: ${css2dObjects.length}`);
-  css2dObjects.forEach((obj, index) => {
-    const distance = camera.position.distanceTo(obj.position);
-    console.log(`  - CSS2D对象 ${index + 1}:`);
-    console.log(`    - 位置: (${obj.position.x.toFixed(2)}, ${obj.position.y.toFixed(2)}, ${obj.position.z.toFixed(2)})`);
-    console.log(`    - 距离相机: ${distance.toFixed(2)}`);
-    console.log(`    - 可见性: ${obj.visible}`);
-    console.log(`    - 元素:`, obj.element);
-  });
-  
-  return {
-    managerLabels: css2dManager.labels.size,
-    sceneObjects: css2dObjects.length,
-    labels: Array.from(css2dManager.labels.entries()),
-    objects: css2dObjects
-  };
-};
-
-window.moveCameraToLabel = (labelId) => {
-  const label = css2dManager.getLabel(labelId);
-  if (!label) {
-    console.log(`❌ 标签 ${labelId} 不存在`);
-    return;
-  }
-  
-  const camera = cameraManager.getCamera();
-  const labelPos = label.position;
-  
-  // 移动相机到标签附近
-  camera.position.set(
-    labelPos.x + 5,
-    labelPos.y + 5,
-    labelPos.z + 5
-  );
-  camera.lookAt(labelPos);
-  
-  console.log(`📷 相机已移动到标签 ${labelId} 附近`);
-  console.log(`📷 相机位置: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
-  console.log(`📷 相机朝向: (${labelPos.x.toFixed(2)}, ${labelPos.y.toFixed(2)}, ${labelPos.z.toFixed(2)})`);
-};
-
-window.moveCameraToFirstLabel = () => {
-  const firstLabel = css2dManager.labels.values().next().value;
-  if (firstLabel) {
-    const labelId = Array.from(css2dManager.labels.keys()).find(id => css2dManager.labels.get(id) === firstLabel);
-    moveCameraToLabel(labelId);
-  } else {
-    console.log('❌ 没有找到任何标签');
-  }
-};
-
-window.createTestLabelNearCamera = () => {
-  const camera = cameraManager.getCamera();
-  
-  // 在相机前方创建一个测试标签
-  const testData = {
-    title: '相机附近测试',
-    configs: [
-      { label: '位置', value: '相机前方' },
-      { label: '距离', value: '5米' }
-    ]
-  };
-  
-  const testLabel = css2dManager.createLabel('camera_test', testData, {
-    position: {
-      x: camera.position.x + 5,
-      y: camera.position.y,
-      z: camera.position.z
-    },
-    type: 'info'
-  });
-  
-  console.log('🧪 在相机附近创建测试标签:', testLabel);
-  console.log('📷 相机位置:', `(${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
-  console.log('🏷️ 标签位置:', `(${testLabel.position.x.toFixed(2)}, ${testLabel.position.y.toFixed(2)}, ${testLabel.position.z.toFixed(2)})`);
-  
-  return testLabel;
-};
-
-window.testAllTemplates = () => {
-  const camera = cameraManager.getCamera();
-  
-  console.log('🧪 测试所有模板...');
-  
-  // 测试title模板
-  const titleData = { title: '标题测试' };
-  const titleLabel = css2dManager.createLabel('test_title', titleData, {
-    position: { x: camera.position.x + 3, y: camera.position.y, z: camera.position.z },
-    type: 'title'
-  });
-  
-  // 测试info模板
-  const infoData = {
-    title: '信息测试',
-    configs: [
-      { label: '状态', value: '正常' },
-      { label: '温度', value: '25°C' }
-    ]
-  };
-  const infoLabel = css2dManager.createLabel('test_info', infoData, {
-    position: { x: camera.position.x + 6, y: camera.position.y, z: camera.position.z },
-    type: 'info'
-  });
-  
-  // 测试detail模板
-  const detailData = {
-    title: '详细测试',
-    configs: [
-      { label: '设备类型', value: '工业设备' },
-      { label: '运行状态', value: '运行中' },
-      { label: '维护状态', value: '良好' }
-    ]
-  };
-  const detailLabel = css2dManager.createLabel('test_detail', detailData, {
-    position: { x: camera.position.x + 9, y: camera.position.y, z: camera.position.z },
-    type: 'detail'
-  });
-  
-  console.log('✅ 所有模板测试标签已创建');
-  console.log('📊 当前标签数量:', css2dManager.labels.size);
-  
-  return { titleLabel, infoLabel, detailLabel };
-};
-
-console.log('📋 测试函数已添加: testSimpleCSS2D(), checkSimpleCSS2DStatus(), testCSS2DManager()');
-console.log('📋 调试函数已添加: enableCSS2DDebug(), disableCSS2DDebug(), checkCSS2DSceneConsistency(), checkDeviceTypesList(), testBusinessLogic(), checkAllLabels(), moveCameraToLabel(), moveCameraToFirstLabel(), createTestLabelNearCamera(), testAllTemplates()');

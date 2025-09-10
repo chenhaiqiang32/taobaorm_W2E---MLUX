@@ -9,6 +9,7 @@ let messageManager = null;
 
 // 导入业务模块
 import { messageHandlerManager } from '../business/index.js';
+import { handleDeviceClick, handleDeviceHover, handleDeviceExit, clearDeviceSelection, setManagers } from '../business/deviceDataManager.js';
 
 /**
  * 鼠标移入射线检测配置
@@ -25,14 +26,16 @@ export const mousemoveConfigModels = [
     fun: function (intersects) {
       console.log("鼠标移入 equipment 模型:", intersects);
       
-      // CSS2D演示：显示设备信息
-      showEquipmentInfo(intersects);
+      // 处理设备悬停：高亮显示和鼠标样式
+      if (intersects.object) {
+        handleDeviceHover(intersects.object);
+      }
     },
     exitFun: function (object) {
       console.log("鼠标移出 equipment 模型:", object);
       
-      // 隐藏CSS2D标签
-      hideModelInfo("equipment");
+      // 处理设备移出：清除高亮和恢复鼠标样式
+      handleDeviceExit(object);
     }
   },
   {
@@ -40,14 +43,16 @@ export const mousemoveConfigModels = [
     fun: function (intersects) {
       console.log("鼠标移入 structure 模型:", intersects);
       
-      // CSS2D演示：显示结构信息
-      showStructureInfo(intersects);
+      // 处理设备悬停：高亮显示和鼠标样式
+      if (intersects.object) {
+        handleDeviceHover(intersects.object);
+      }
     },
     exitFun: function (object) {
       console.log("鼠标移出 structure 模型:", object);
       
-      // 隐藏CSS2D标签
-      hideModelInfo("structure");
+      // 处理设备移出：清除高亮和恢复鼠标样式
+      handleDeviceExit(object);
     }
   },
 ];
@@ -58,14 +63,24 @@ export const mousemoveConfigModels = [
 export const clickConfigModels = [
   {
     name: "equipment",
-    fun: function (intersects) {
-      console.log("单击 equipment 模型:", intersects);
+    fun: function (intersect) {
+      console.log("单击 equipment 模型:", intersect);
+      // 处理设备点击：显示标签和outline效果
+      if (intersect.object) {
+        const clickedObject = intersect.object;
+        handleDeviceClick(clickedObject);
+      }
     },
   },
   {
     name: "structure",
-    fun: function (intersects) {
-      console.log("单击 structure 模型:", intersects);
+    fun: function (intersect) {
+      console.log("单击 structure 模型:", intersect);
+      // 处理设备点击：显示标签和outline效果
+      if (intersect.object) {
+        const clickedObject = intersect.object;
+        handleDeviceClick(clickedObject);
+      }
     },
   }
 ];
@@ -74,24 +89,24 @@ export const clickConfigModels = [
  * 鼠标双击射线检测配置
  */
 export const dblclickConfigModels = [
-  {
-    name: "equipment",
-    fun: function (intersects) {
-      console.log("双击 equipment 模型:", intersects);
+  // {
+  //   name: "equipment",
+  //   fun: function (intersects) {
+  //     console.log("双击 equipment 模型:", intersects);
       
-      // CSS2D演示：显示详细设备信息
-      showEquipmentDetail(intersects);
-    },
-  },
-  {
-    name: "structure",
-    fun: function (intersects) {
-      console.log("双击 structure 模型:", intersects);
+  //     // CSS2D演示：显示详细设备信息
+  //     showEquipmentDetail(intersects);
+  //   },
+  // },
+  // {
+  //   name: "structure",
+  //   fun: function (intersects) {
+  //     console.log("双击 structure 模型:", intersects);
       
-      // CSS2D演示：显示详细结构信息
-      showStructureDetail(intersects);
-    },
-  }
+  //     // CSS2D演示：显示详细结构信息
+  //     showStructureDetail(intersects);
+  //   },
+  // }
 ];
 
 /**
@@ -114,6 +129,15 @@ export function setMessageManager(manager) {
   
   // 使用业务模块的消息处理器管理器
   messageHandlerManager.setMessageManager(manager);
+}
+
+/**
+ * 设置后处理管理器引用
+ * @param {PostprocessingManager} postprocessingManager - 后处理管理器实例
+ */
+export function setPostprocessingManager(postprocessingManager) {
+  // 设置设备数据管理器的管理器引用
+  setManagers(postprocessingManager, css2dManager);
 }
 
 

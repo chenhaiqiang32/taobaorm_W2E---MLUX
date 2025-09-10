@@ -13,7 +13,13 @@ export {
   getAllDeviceModelData,
   setDeviceModelData,
   removeDeviceModelData,
-  testDeviceDataFormat
+  testDeviceDataFormat,
+  handleDeviceClick,
+  handleDeviceHover,
+  handleDeviceExit,
+  clearDeviceSelection,
+  getCurrentSelectedDevice,
+  setManagers
 } from './deviceDataManager.js';
 
 // 设备配置管理
