@@ -1,5 +1,10 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { 
+  getCameraTweenConfig, 
+  calculateCameraTarget, 
+  applyEasing 
+} from "../assets/cameraTweenConfig.js";
 
 /**
  * 相机管理器
@@ -11,6 +16,18 @@ export class CameraManager {
     this.controls = null;
     this.defaultPosition = new THREE.Vector3(0, 14, 24);
     this.defaultTarget = new THREE.Vector3(0, 0, 0);
+    
+    // 动画相关属性
+    this.isAnimating = false;
+    this.currentAnimation = null;
+    this.animationStartTime = 0;
+    this.animationDuration = 0;
+    this.startPosition = new THREE.Vector3();
+    this.startTarget = new THREE.Vector3();
+    this.endPosition = new THREE.Vector3();
+    this.endTarget = new THREE.Vector3();
+    this.animationConfig = null;
+    this.animationCallback = null;
   }
 
   /**
@@ -186,9 +203,164 @@ export class CameraManager {
   }
 
   /**
+   * 镜头动画到目标物体
+   * @param {Object} boundingBox - 目标物体的包围盒
+   * @param {string} targetType - 目标类型 ('device', 'group', 'default')
+   * @param {Function} onComplete - 动画完成回调
+   * @param {Object} customConfig - 自定义配置（可选）
+   */
+  animateToTarget(boundingBox, targetType = 'default', onComplete = null, customConfig = null) {
+    if (!this.camera || !this.controls) {
+      console.warn('相机或控制器未初始化');
+      return;
+    }
+
+    if (this.isAnimating) {
+      console.log('镜头动画正在进行中，跳过新的动画请求');
+      return;
+    }
+
+    // 计算目标位置
+    const targetData = calculateCameraTarget(boundingBox, targetType, customConfig);
+    if (!targetData) {
+      console.warn('无法计算镜头目标位置');
+      return;
+    }
+
+    // 获取动画配置
+    this.animationConfig = customConfig || getCameraTweenConfig(targetType);
+    this.animationCallback = onComplete;
+
+    // 设置动画参数
+    this.startPosition.copy(this.camera.position);
+    this.startTarget.copy(this.controls.target);
+    this.endPosition.copy(targetData.position);
+    this.endTarget.copy(targetData.target);
+    this.animationDuration = this.animationConfig.duration;
+    this.animationStartTime = performance.now();
+    this.isAnimating = true;
+
+    // 如果配置要求，禁用控制器
+    if (this.animationConfig.disableControlsDuringAnimation) {
+      this.controls.enabled = false;
+    }
+
+    console.log(`🎬 开始镜头动画到${targetType}:`, {
+      startPosition: this.startPosition,
+      endPosition: this.endPosition,
+      startTarget: this.startTarget,
+      endTarget: this.endTarget,
+      duration: this.animationDuration
+    });
+  }
+
+  /**
+   * 更新镜头动画
+   * 需要在渲染循环中调用
+   */
+  updateAnimation() {
+    if (!this.isAnimating) return;
+
+    const currentTime = performance.now();
+    const elapsed = currentTime - this.animationStartTime;
+    const progress = Math.min(elapsed / this.animationDuration, 1);
+
+    // 应用缓动函数
+    const easedProgress = applyEasing(progress, this.animationConfig.easing);
+
+    // 插值计算当前位置和目标
+    this.camera.position.lerpVectors(this.startPosition, this.endPosition, easedProgress);
+    this.controls.target.lerpVectors(this.startTarget, this.endTarget, easedProgress);
+    this.controls.update();
+
+    // 检查动画是否完成
+    if (progress >= 1) {
+      this.completeAnimation();
+    }
+  }
+
+  /**
+   * 完成动画
+   */
+  completeAnimation() {
+    this.isAnimating = false;
+    
+    // 确保最终位置准确
+    this.camera.position.copy(this.endPosition);
+    this.controls.target.copy(this.endTarget);
+    this.controls.update();
+
+    // 如果配置要求，重新启用控制器
+    if (this.animationConfig.enableControlsAfterAnimation) {
+      this.controls.enabled = true;
+    }
+
+    console.log('🎬 镜头动画完成');
+
+    // 延迟执行回调
+    if (this.animationCallback) {
+      setTimeout(() => {
+        this.animationCallback();
+        this.animationCallback = null;
+      }, this.animationConfig.onCompleteDelay);
+    }
+
+    // 清理动画数据
+    this.animationConfig = null;
+  }
+
+  /**
+   * 停止当前动画
+   */
+  stopAnimation() {
+    if (this.isAnimating) {
+      this.isAnimating = false;
+      this.controls.enabled = true;
+      this.animationConfig = null;
+      this.animationCallback = null;
+      console.log('🛑 镜头动画已停止');
+    }
+  }
+
+  /**
+   * 检查是否正在动画中
+   * @returns {boolean} 是否正在动画
+   */
+  isAnimationInProgress() {
+    return this.isAnimating;
+  }
+
+  /**
+   * 镜头动画到设备组
+   * @param {Object} groupInfo - 设备组信息
+   * @param {Function} onComplete - 动画完成回调
+   */
+  animateToGroup(groupInfo, onComplete = null) {
+    if (!groupInfo || !groupInfo.boundingBox) {
+      console.warn('设备组信息无效');
+      return;
+    }
+    this.animateToTarget(groupInfo.boundingBox, 'group', onComplete);
+  }
+
+  /**
+   * 镜头动画到设备
+   * @param {Object} deviceInfo - 设备信息
+   * @param {Function} onComplete - 动画完成回调
+   */
+  animateToDevice(deviceInfo, onComplete = null) {
+    if (!deviceInfo || !deviceInfo.boundingBox) {
+      console.warn('设备信息无效');
+      return;
+    }
+    this.animateToTarget(deviceInfo.boundingBox, 'device', onComplete);
+  }
+
+  /**
    * 清理资源
    */
   dispose() {
+    this.stopAnimation();
     if (this.controls) {
       this.controls.dispose();
     }

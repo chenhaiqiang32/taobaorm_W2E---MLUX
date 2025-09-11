@@ -19,8 +19,9 @@ import { CSS2DManager } from "./src/components/css2dManager.js";
 import { MessageManager } from "./src/components/messageManager.js";
 import { PostprocessingManager } from "./src/components/postprocessingManager.js";
 import { setCSS2DManager, setMessageManager, setPostprocessingManager } from "./src/assets/raycasterConfig.js";
-import { handleDeviceClick, getCurrentSelectedDevice } from "./src/business/deviceDataManager.js";
+import { handleDeviceClick, getCurrentSelectedDevice, setManagers, clearAllSelections } from "./src/business/deviceDataManager.js";
 import { createGroupLabels } from "./src/business/index.js";
+import { HighlightEffectsManager } from "./src/components/highlightEffectsManager.js";
 import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 // 创建管理器实例
@@ -33,6 +34,7 @@ const raycasterManager = new RaycasterManager();
 const css2dManager = new CSS2DManager();
 const messageManager = new MessageManager();
 const postprocessingManager = new PostprocessingManager();
+const highlightEffectsManager = new HighlightEffectsManager();
 
 // 简单的CSS2D渲染器（用于测试）
 let simpleCSS2DRenderer = null;
@@ -188,12 +190,19 @@ function initScene() {
   // 初始化消息管理器
   messageManager.init();
   console.log('✅ MessageManager初始化完成，准备接收消息');
-  
+
+  // 初始化醒目效果管理器
+  highlightEffectsManager.init(scene);
+  console.log('✅ HighlightEffectsManager初始化完成');
+
   // 在MessageManager初始化后设置引用
   setMessageManager(messageManager);
   
   // 设置后处理管理器引用
   setPostprocessingManager(postprocessingManager);
+
+  // 设置设备数据管理器引用
+  setManagers(postprocessingManager, css2dManager, cameraManager, highlightEffectsManager);
 
   // // 初始化灯光管理器
   lightingManager.init(scene);
@@ -296,7 +305,7 @@ function setupModelAndScene(scene) {
 
       // 创建设备组CSS2D标签
       console.log("🏷️ 开始创建设备组标签...");
-      createGroupLabels(css2dManager);
+      createGroupLabels(css2dManager, cameraManager);
     })
     .catch((error) => {
       console.error("Failed to setup model and controls:", error);
@@ -373,6 +382,12 @@ function animate(time) {
 
   // 更新控制器
   cameraManager.update();
+
+  // 更新相机动画
+  cameraManager.updateAnimation();
+
+  // 更新醒目效果动画
+  highlightEffectsManager.update(time);
 
   // 更新地面效果动画
   if (groundEffect) {

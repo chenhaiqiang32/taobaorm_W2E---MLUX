@@ -7,6 +7,13 @@
  * 后处理效果配置
  */
 export const POSTPROCESSING_CONFIG = {
+  // 抗锯齿配置
+  antialias: {
+    enabled: true,
+    type: 'SMAA', // 'SMAA', 'SSAA', 'none'
+    quality: 'high' // 'low', 'medium', 'high'
+  },
+
   // 轮廓效果配置
   outline: {
     // 基础配置
@@ -302,4 +309,53 @@ export function getAvailablePresets() {
  */
 export function getAvailableDeviceTypes() {
   return Object.keys(POSTPROCESSING_CONFIG.deviceTypes);
+}
+
+/**
+ * 获取抗锯齿配置
+ * @returns {Object} 抗锯齿配置
+ */
+export function getAntialiasConfig() {
+  return { ...POSTPROCESSING_CONFIG.antialias };
+}
+
+/**
+ * 获取可用的抗锯齿类型
+ * @returns {Array} 抗锯齿类型数组
+ */
+export function getAvailableAntialiasTypes() {
+  return ['SMAA', 'SSAA', 'none'];
+}
+
+/**
+ * 验证抗锯齿配置
+ * @param {Object} config - 要验证的配置
+ * @returns {Object} 验证结果
+ */
+export function validateAntialiasConfig(config) {
+  const errors = [];
+  const warnings = [];
+  
+  // 检查类型
+  const validTypes = getAvailableAntialiasTypes();
+  if (!validTypes.includes(config.type)) {
+    errors.push(`type 必须是以下之一: ${validTypes.join(', ')}`);
+  }
+  
+  // 检查enabled
+  if (typeof config.enabled !== 'boolean') {
+    errors.push('enabled 必须是布尔值');
+  }
+  
+  // 检查quality
+  const validQualities = ['low', 'medium', 'high'];
+  if (config.quality && !validQualities.includes(config.quality)) {
+    errors.push(`quality 必须是以下之一: ${validQualities.join(', ')}`);
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings
+  };
 }

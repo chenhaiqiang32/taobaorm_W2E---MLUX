@@ -7,6 +7,8 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
+import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
+import { SSAARenderPass } from 'three/examples/jsm/postprocessing/SSAARenderPass.js';
 import { POSTPROCESSING_CONFIG } from '../assets/postprocessingConfig.js';
 
 export class PostprocessingManager {
@@ -14,6 +16,7 @@ export class PostprocessingManager {
     this.composer = null;
     this.renderPass = null;
     this.outlinePass = null;
+    this.antialiasPass = null;
     this.renderer = null;
     this.scene = null;
     this.camera = null;
@@ -22,9 +25,17 @@ export class PostprocessingManager {
     // 当前高亮的对象
     this.currentHighlightedObjects = [];
     
+    // 抗锯齿配置
+    this.antialiasConfig = {
+      enabled: true,
+      type: 'SMAA', // 'SMAA', 'SSAA', 'none'
+      quality: 'high' // 'low', 'medium', 'high'
+    };
+    
     // 使用配置文件中的默认配置
     this.defaultConfig = {
-      outline: POSTPROCESSING_CONFIG.outline
+      outline: POSTPROCESSING_CONFIG.outline,
+      antialias: this.antialiasConfig
     };
   }
 
@@ -63,8 +74,51 @@ export class PostprocessingManager {
     // 添加到合成器
     this.composer.addPass(this.outlinePass);
     
+    // 创建抗锯齿通道
+    this.createAntialiasPass();
+    
     this.isInitialized = true;
     console.log('🎨 后处理管理器初始化完成');
+  }
+
+  /**
+   * 创建抗锯齿通道
+   */
+  createAntialiasPass() {
+    if (!this.composer || !this.antialiasConfig.enabled) {
+      return;
+    }
+    
+    const { type, quality } = this.antialiasConfig;
+    
+    try {
+      switch (type) {
+        case 'SMAA':
+          this.antialiasPass = new SMAAPass(
+            window.innerWidth,
+            window.innerHeight
+          );
+          console.log('✅ SMAA抗锯齿通道已创建');
+          break;
+          
+        case 'SSAA':
+          // SSAA需要替换RenderPass，所以这里我们暂时跳过
+          // 在实际应用中，SSAA通常通过提高渲染分辨率实现
+          console.log('ℹ️ SSAA抗锯齿需要特殊处理，暂时跳过');
+          return;
+          
+        default:
+          console.log('ℹ️ 未启用抗锯齿');
+          return;
+      }
+      
+      // 添加到合成器的最后（在轮廓效果之后）
+      this.composer.addPass(this.antialiasPass);
+      
+    } catch (error) {
+      console.warn('⚠️ 创建抗锯齿通道失败:', error);
+      this.antialiasPass = null;
+    }
   }
 
   /**
@@ -86,6 +140,41 @@ export class PostprocessingManager {
     if (outlineConfig.resolution.x > 0 && outlineConfig.resolution.y > 0) {
       this.outlinePass.setSize(outlineConfig.resolution.x, outlineConfig.resolution.y);
     }
+  }
+
+  /**
+   * 应用抗锯齿配置
+   * @param {Object} antialiasConfig - 抗锯齿配置
+   */
+  applyAntialiasConfig(antialiasConfig) {
+    this.antialiasConfig = { ...this.antialiasConfig, ...antialiasConfig };
+    
+    // 如果抗锯齿通道已存在，先移除
+    if (this.antialiasPass && this.composer) {
+      this.composer.removePass(this.antialiasPass);
+      this.antialiasPass = null;
+    }
+    
+    // 重新创建抗锯齿通道
+    this.createAntialiasPass();
+    
+    console.log('🎯 抗锯齿配置已应用:', this.antialiasConfig);
+  }
+
+  /**
+   * 设置抗锯齿类型
+   * @param {string} type - 抗锯齿类型 ('SMAA', 'SSAA', 'none')
+   */
+  setAntialiasType(type) {
+    this.applyAntialiasConfig({ type });
+  }
+
+  /**
+   * 启用/禁用抗锯齿
+   * @param {boolean} enabled - 是否启用
+   */
+  setAntialiasEnabled(enabled) {
+    this.applyAntialiasConfig({ enabled });
   }
 
   /**
@@ -192,6 +281,10 @@ export class PostprocessingManager {
       this.applyOutlineConfig(newConfig.outline);
     }
     
+    if (newConfig.antialias) {
+      this.applyAntialiasConfig(newConfig.antialias);
+    }
+    
     console.log('⚙️ 后处理配置已更新');
   }
 
@@ -209,6 +302,13 @@ export class PostprocessingManager {
     
     if (this.outlinePass) {
       this.outlinePass.setSize(width, height);
+    }
+    
+    // 重新创建抗锯齿通道以适应新尺寸
+    if (this.antialiasPass) {
+      this.composer.removePass(this.antialiasPass);
+      this.antialiasPass = null;
+      this.createAntialiasPass();
     }
     
     console.log(`📐 后处理管理器大小已调整: ${width}x${height}`);
@@ -242,6 +342,30 @@ export class PostprocessingManager {
   }
 
   /**
+   * 获取抗锯齿通道
+   * @returns {SMAAPass|SSAARenderPass|null} 抗锯齿通道
+   */
+  getAntialiasPass() {
+    return this.antialiasPass;
+  }
+
+  /**
+   * 获取抗锯齿配置
+   * @returns {Object} 抗锯齿配置
+   */
+  getAntialiasConfig() {
+    return { ...this.antialiasConfig };
+  }
+
+  /**
+   * 检查抗锯齿是否启用
+   * @returns {boolean} 是否启用
+   */
+  isAntialiasEnabled() {
+    return this.antialiasConfig.enabled && this.antialiasPass !== null;
+  }
+
+  /**
    * 调试：输出当前状态
    */
   debugStatus() {
@@ -249,6 +373,8 @@ export class PostprocessingManager {
     console.log('  - 初始化状态:', this.isInitialized);
     console.log('  - 合成器:', !!this.composer);
     console.log('  - 轮廓通道:', !!this.outlinePass);
+    console.log('  - 抗锯齿通道:', !!this.antialiasPass);
+    console.log('  - 抗锯齿配置:', this.antialiasConfig);
     console.log('  - 当前高亮对象数量:', this.currentHighlightedObjects.length);
     console.log('  - 高亮对象:', this.currentHighlightedObjects.map(obj => obj.name || 'unnamed'));
     
@@ -275,6 +401,7 @@ export class PostprocessingManager {
     
     this.renderPass = null;
     this.outlinePass = null;
+    this.antialiasPass = null;
     this.renderer = null;
     this.scene = null;
     this.camera = null;

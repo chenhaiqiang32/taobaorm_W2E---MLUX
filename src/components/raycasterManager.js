@@ -263,7 +263,11 @@ export class RaycasterManager {
    * @param {string} eventType - 事件类型
    */
   handleClickEvent(intersects, configs, eventType) {
-    if (intersects.length === 0) return;
+    // 处理空白点击（没有相交对象）
+    if (intersects.length === 0) {
+      this.handleBlankClick(eventType);
+      return;
+    }
 
     const intersect = intersects[0];
     const modelName = this.getModelNameByObject(intersect.object);
@@ -276,6 +280,20 @@ export class RaycasterManager {
       } catch (error) {
         console.error(`执行模型 "${modelName}" ${eventType} 回调时出错:`, error);
       }
+    }
+  }
+
+  /**
+   * 处理空白点击事件
+   * @param {string} eventType - 事件类型
+   */
+  handleBlankClick(eventType) {
+    if (eventType === 'click') {
+      console.log('🎯 点击空白区域，清除所有选择');
+      // 导入并调用清除所有选择函数
+      import('../business/deviceDataManager.js').then(module => {
+        module.clearAllSelections();
+      });
     }
   }
 

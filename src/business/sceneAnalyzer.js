@@ -130,20 +130,26 @@ export class SceneAnalyzer {
    * @returns {Object} 设备信息
    */
   createDeviceInfo(child, modelName, groupName = null) {
-    // 计算包围盒
+    // 计算包围盒（使用世界坐标）
     const boundingBox = new THREE.Box3().setFromObject(child);
     const center = boundingBox.getCenter(new THREE.Vector3());
     const size = boundingBox.getSize(new THREE.Vector3());
+    
+    // 确保使用世界坐标
+    child.updateMatrixWorld(true);
+    const worldBoundingBox = new THREE.Box3().setFromObject(child);
+    const worldCenter = worldBoundingBox.getCenter(new THREE.Vector3());
+    const worldSize = worldBoundingBox.getSize(new THREE.Vector3());
     
     const deviceInfo = {
       name: child.name,
       model: child,
       modelName: modelName,
       boundingBox: {
-        min: boundingBox.min.clone(),
-        max: boundingBox.max.clone(),
-        center: center,
-        size: size
+        min: worldBoundingBox.min.clone(),
+        max: worldBoundingBox.max.clone(),
+        center: worldCenter,
+        size: worldSize
       },
       position: child.position.clone(),
       rotation: child.rotation.clone(),
@@ -166,10 +172,16 @@ export class SceneAnalyzer {
    * @returns {Object} 设备组信息
    */
   createGroupInfo(group, modelName) {
-    // 计算包围盒
+    // 计算包围盒（使用世界坐标）
     const boundingBox = new THREE.Box3().setFromObject(group);
     const center = boundingBox.getCenter(new THREE.Vector3());
     const size = boundingBox.getSize(new THREE.Vector3());
+    
+    // 确保使用世界坐标
+    group.updateMatrixWorld(true);
+    const worldBoundingBox = new THREE.Box3().setFromObject(group);
+    const worldCenter = worldBoundingBox.getCenter(new THREE.Vector3());
+    const worldSize = worldBoundingBox.getSize(new THREE.Vector3());
     
     // 统计组内设备数量
     const deviceCount = group.children.filter(child => 
@@ -181,10 +193,10 @@ export class SceneAnalyzer {
       model: group,
       modelName: modelName,
       boundingBox: {
-        min: boundingBox.min.clone(),
-        max: boundingBox.max.clone(),
-        center: center,
-        size: size
+        min: worldBoundingBox.min.clone(),
+        max: worldBoundingBox.max.clone(),
+        center: worldCenter,
+        size: worldSize
       },
       position: group.position.clone(),
       rotation: group.rotation.clone(),
@@ -201,6 +213,42 @@ export class SceneAnalyzer {
     };
     
     return groupInfo;
+  }
+
+  /**
+   * 更新对象的包围盒（使用世界坐标）
+   * @param {THREE.Object3D} object - 要更新包围盒的对象
+   * @returns {Object} 更新后的包围盒信息
+   */
+  updateBoundingBox(object) {
+    if (!object) {
+      console.warn('无效的对象，无法更新包围盒');
+      return null;
+    }
+
+    // 确保使用世界坐标
+    object.updateMatrixWorld(true);
+    const worldBoundingBox = new THREE.Box3().setFromObject(object);
+    const worldCenter = worldBoundingBox.getCenter(new THREE.Vector3());
+    const worldSize = worldBoundingBox.getSize(new THREE.Vector3());
+
+    // 调试信息
+    console.log(`🔍 更新包围盒 - 对象: ${object.name}`, {
+      position: object.position,
+      worldCenter: worldCenter,
+      worldSize: worldSize,
+      boundingBox: {
+        min: worldBoundingBox.min,
+        max: worldBoundingBox.max
+      }
+    });
+
+    return {
+      min: worldBoundingBox.min.clone(),
+      max: worldBoundingBox.max.clone(),
+      center: worldCenter,
+      size: worldSize
+    };
   }
 
   /**

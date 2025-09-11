@@ -10,8 +10,11 @@ import { getDeviceOutlineConfig, applyDeviceTypeToOutlinePass } from '../assets/
 
 // 全局状态管理
 let currentSelectedDevice = null;
+let currentSelectedGroup = null;
 let postprocessingManager = null;
 let css2dManager = null;
+let cameraManager = null;
+let highlightEffectsManager = null;
 
 /**
  * 处理多设备数据的业务逻辑
@@ -86,11 +89,15 @@ export function processDeviceData(deviceDataArray, css2dManager) {
  * 设置管理器实例
  * @param {Object} postprocessingMgr - 后处理管理器实例
  * @param {Object} css2dMgr - CSS2D管理器实例
+ * @param {Object} cameraMgr - 相机管理器实例
+ * @param {Object} highlightMgr - 醒目效果管理器实例
  */
-export function setManagers(postprocessingMgr, css2dMgr) {
+export function setManagers(postprocessingMgr, css2dMgr, cameraMgr = null, highlightMgr = null) {
   postprocessingManager = postprocessingMgr;
   css2dManager = css2dMgr;
-  console.log('🔧 设备数据管理器已设置后处理和CSS2D管理器');
+  cameraManager = cameraMgr;
+  highlightEffectsManager = highlightMgr;
+  console.log('🔧 设备数据管理器已设置后处理、CSS2D、相机和醒目效果管理器');
 }
 
 /**
@@ -209,8 +216,9 @@ export function handleDeviceClick(clickedObject) {
     return;
   }
 
-  // 清除之前的选择
+  // 清除之前的选择（包括设备组选择）
   clearDeviceSelection();
+  clearGroupSelection();
 
   // 设置新的选择
   currentSelectedDevice = {
@@ -225,7 +233,65 @@ export function handleDeviceClick(clickedObject) {
   // 显示设备标签
   showDeviceLabel(clickDevice.name);
 
-  console.log(`🎯 设备 ${clickDevice.name} 已被选中，应用outline效果和显示标签`);
+  // 添加醒目效果
+  if (highlightEffectsManager) {
+    // 动态更新包围盒以确保位置准确
+    const deviceInfo = DEVICE_TYPES_LIST.find(device => device.name === clickDevice.name);
+    if (deviceInfo) {
+      // 使用场景分析器更新包围盒
+      import('./sceneAnalyzer.js').then(module => {
+        const sceneAnalyzer = new module.SceneAnalyzer();
+        const updatedBoundingBox = sceneAnalyzer.updateBoundingBox(clickDevice);
+        
+        if (updatedBoundingBox) {
+          highlightEffectsManager.addHighlightEffect(
+            `device_${clickDevice.name}`,
+            updatedBoundingBox,
+            'device',
+            'glow'
+          );
+        } else if (deviceInfo.boundingBox) {
+          // 如果更新失败，使用原始包围盒
+          highlightEffectsManager.addHighlightEffect(
+            `device_${clickDevice.name}`,
+            deviceInfo.boundingBox,
+            'device',
+            'glow'
+          );
+        }
+      });
+    }
+  }
+
+  // 镜头动画到设备
+  if (cameraManager) {
+    const deviceInfo = DEVICE_TYPES_LIST.find(device => device.name === clickDevice.name);
+    if (deviceInfo) {
+      // 使用动态更新的包围盒进行镜头动画
+      import('./sceneAnalyzer.js').then(module => {
+        const sceneAnalyzer = new module.SceneAnalyzer();
+        const updatedBoundingBox = sceneAnalyzer.updateBoundingBox(clickDevice);
+        
+        if (updatedBoundingBox) {
+          // 创建临时的设备信息对象用于镜头动画
+          const tempDeviceInfo = {
+            ...deviceInfo,
+            boundingBox: updatedBoundingBox
+          };
+          cameraManager.animateToDevice(tempDeviceInfo, () => {
+            console.log(`🎬 镜头动画到设备 ${clickDevice.name} 完成`);
+          });
+        } else if (deviceInfo.boundingBox) {
+          // 如果更新失败，使用原始包围盒
+          cameraManager.animateToDevice(deviceInfo, () => {
+            console.log(`🎬 镜头动画到设备 ${clickDevice.name} 完成`);
+          });
+        }
+      });
+    }
+  }
+
+  console.log(`🎯 设备 ${clickDevice.name} 已被选中，应用outline效果、醒目效果、显示标签和镜头动画`);
 }
 
 /**
@@ -318,6 +384,11 @@ export function clearDeviceSelection() {
     postprocessingManager.clearHighlight();
   }
 
+  // 清除醒目效果
+  if (highlightEffectsManager) {
+    highlightEffectsManager.removeHighlightEffect(`device_${currentSelectedDevice.name}`);
+  }
+
   // 隐藏标签
   if (css2dManager && currentSelectedDevice.name) {
     const labelId = `${currentSelectedDevice.name}_info`;
@@ -349,40 +420,171 @@ export function getCurrentSelectedDevice() {
 }
 
 /**
+ * 处理设备组点击事件
+ * @param {Object} groupInfo - 设备组信息
+ */
+export function handleGroupClick(groupInfo) {
+  console.log(`🎯 处理设备组点击:`, groupInfo);
+  
+  if (!highlightEffectsManager) {
+    console.warn('醒目效果管理器未设置');
+    return;
+  }
+
+  // 如果点击的是同一个设备组，则取消选择
+  if (currentSelectedGroup && currentSelectedGroup.name === groupInfo.name) {
+    clearGroupSelection();
+    return;
+  }
+
+  // 清除之前的选择（包括设备选择）
+  clearDeviceSelection();
+  clearGroupSelection();
+
+  // 设置新的设备组选择
+  currentSelectedGroup = {
+    name: groupInfo.name,
+    info: groupInfo
+  };
+
+  // 添加设备组醒目效果
+  if (groupInfo.model) {
+    // 动态更新包围盒以确保位置准确
+    import('./sceneAnalyzer.js').then(module => {
+      const sceneAnalyzer = new module.SceneAnalyzer();
+      const updatedBoundingBox = sceneAnalyzer.updateBoundingBox(groupInfo.model);
+      
+      if (updatedBoundingBox) {
+        highlightEffectsManager.addHighlightEffect(
+          `group_${groupInfo.name}`,
+          updatedBoundingBox,
+          'group',
+          'glow'
+        );
+      } else if (groupInfo.boundingBox) {
+        // 如果更新失败，使用原始包围盒
+        highlightEffectsManager.addHighlightEffect(
+          `group_${groupInfo.name}`,
+          groupInfo.boundingBox,
+          'group',
+          'glow'
+        );
+      }
+    });
+  }
+
+  // 镜头动画到设备组
+  if (cameraManager) {
+    // 使用动态更新的包围盒进行镜头动画
+    import('./sceneAnalyzer.js').then(module => {
+      const sceneAnalyzer = new module.SceneAnalyzer();
+      const updatedBoundingBox = sceneAnalyzer.updateBoundingBox(groupInfo.model);
+      
+      if (updatedBoundingBox) {
+        // 创建临时的设备组信息对象用于镜头动画
+        const tempGroupInfo = {
+          ...groupInfo,
+          boundingBox: updatedBoundingBox
+        };
+        cameraManager.animateToGroup(tempGroupInfo, () => {
+          console.log(`🎬 镜头动画到设备组 ${groupInfo.name} 完成`);
+        });
+      } else if (groupInfo.boundingBox) {
+        // 如果更新失败，使用原始包围盒
+        cameraManager.animateToGroup(groupInfo, () => {
+          console.log(`🎬 镜头动画到设备组 ${groupInfo.name} 完成`);
+        });
+      }
+    });
+  }
+
+  console.log(`🎯 设备组 ${groupInfo.name} 已被选中，应用醒目效果和镜头动画`);
+}
+
+/**
+ * 清除设备组选择
+ */
+export function clearGroupSelection() {
+  if (!currentSelectedGroup) return;
+
+  // 清除醒目效果
+  if (highlightEffectsManager) {
+    highlightEffectsManager.removeHighlightEffect(`group_${currentSelectedGroup.name}`);
+  }
+
+  console.log(`🧹 清除设备组 ${currentSelectedGroup.name} 的选择状态`);
+  currentSelectedGroup = null;
+}
+
+/**
+ * 获取当前选中的设备组
+ * @returns {Object|null} 当前选中的设备组信息
+ */
+export function getCurrentSelectedGroup() {
+  return currentSelectedGroup;
+}
+
+/**
+ * 清除所有选择（设备和设备组）
+ */
+export function clearAllSelections() {
+  clearDeviceSelection();
+  clearGroupSelection();
+  console.log('🧹 清除所有选择状态');
+}
+
+/**
  * 在包围盒上方插入label
  * @param {Object} device - 设备信息对象
  * @param {Object} data - 设备数据
  * @param {Object} css2dManager - CSS2D管理器实例
  */
 function insertLabelAboveBoundingBox(device, data, css2dManager) {
-  const { name, boundingBox } = device;
+  const { name, model } = device;
   
-  if (!boundingBox || !boundingBox.center) {
-    console.warn(`设备 ${name} 的包围盒数据无效`);
+  if (!model) {
+    console.warn(`设备 ${name} 的模型对象无效`);
     return;
   }
-  // 计算标签位置（包围盒中心上方）
-  const labelPosition = {
-    x: boundingBox.center.x,
-    y: boundingBox.center.y + boundingBox.size.y / 2 + 0.5, // 在包围盒上方0.5个单位
-    z: boundingBox.center.z
-  };
   
-  // 创建标签数据
-  const labelData = {
-    title: data.title || name,
-    configs: data.configs || []
-  };
-  
-  // 创建或更新标签（默认不显示）
-  const labelId = `${name}_info`;
-  css2dManager.createLabel(labelId, labelData, {
-    position: labelPosition,
-    type: 'info',
-    visible: false  // 默认不显示
+  // 动态更新包围盒以确保使用最新的世界坐标
+  import('./sceneAnalyzer.js').then(module => {
+    const sceneAnalyzer = new module.SceneAnalyzer();
+    const updatedBoundingBox = sceneAnalyzer.updateBoundingBox(model);
+    
+    if (!updatedBoundingBox || !updatedBoundingBox.center) {
+      console.warn(`设备 ${name} 的包围盒数据无效`);
+      return;
+    }
+    
+    // 计算标签位置（包围盒中心上方）
+    const labelPosition = {
+      x: updatedBoundingBox.center.x,
+      y: updatedBoundingBox.center.y + updatedBoundingBox.size.y / 2 + 0.5, // 在包围盒上方0.5个单位
+      z: updatedBoundingBox.center.z
+    };
+    
+    // 创建标签数据
+    const labelData = {
+      title: data.title || name,
+      configs: data.configs || []
+    };
+    
+    // 创建或更新标签（默认不显示）
+    const labelId = `${name}_info`;
+    css2dManager.createLabel(labelId, labelData, {
+      position: labelPosition,
+      type: 'info',
+      visible: false  // 默认不显示
+    });
+    
+    console.log(`🏷️ 标签已插入到设备 ${name} 上方:`, {
+      labelPosition,
+      boundingBox: updatedBoundingBox
+    });
+  }).catch(error => {
+    console.error(`❌ 创建设备 ${name} 标签时出错:`, error);
   });
-  
-  // console.log(`🏷️ 标签已插入到设备 ${name} 上方:`, labelPosition);
 }
 
 /**

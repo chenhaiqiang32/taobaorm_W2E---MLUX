@@ -19,6 +19,10 @@ export {
   handleDeviceExit,
   clearDeviceSelection,
   getCurrentSelectedDevice,
+  handleGroupClick,
+  clearGroupSelection,
+  getCurrentSelectedGroup,
+  clearAllSelections,
   setManagers
 } from './deviceDataManager.js';
 
