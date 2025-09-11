@@ -298,7 +298,7 @@
             <div class="section">
                 <h2>🎮 3D场景</h2>
                 <div class="iframe-container">
-                    <iframe id="sceneFrame" src="http://localhost:5173/" title="3D场景"></iframe>
+                    <iframe id="sceneFrame" src="https://chenhaiqiang32.github.io/taobaorm_W2E---MLUX/" title="3D场景"></iframe>
                 </div>
             </div>
         </div>
@@ -317,7 +317,7 @@
         // 监听来自iframe的消息
         window.addEventListener('message', function(event) {
             // 安全检查：只接受来自iframe源的消息
-            if (event.origin !== 'http://localhost:5173') {
+            if (event.origin !== 'https://chenhaiqiang32.github.io/taobaorm_W2E---MLUX/') {
                 return;
             }
         });
@@ -453,7 +453,7 @@
             };
 
             try {
-                sceneFrame.contentWindow.postMessage(message, 'http://localhost:5173');
+                sceneFrame.contentWindow.postMessage(message, 'https://chenhaiqiang32.github.io/taobaorm_W2E---MLUX');
             } catch (error) {
                 alert('发送消息失败: ' + error.message);
             }

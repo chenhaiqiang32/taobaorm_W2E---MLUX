@@ -60,13 +60,12 @@ export class PathManager {
     console.log('🔍 开始解析路径模型...');
     
       let foundCount = 0;
-      
       // 遍历所有子对象
     lineModel.traverse((child) => {
       if (child.isMesh && child.name && child.name.includes('Path_Lin_')) {
-        // 提取路径名称（最后一个"_"后的部分）
+        // 提取路径名称（第一个"_"前的部分）
         const parts = child.name.split('_');
-        const pathName = parts[parts.length - 1];
+        const pathName = parts[0];
         
         if (pathName) {
           console.log(`✅ 找到路径: ${child.name} -> 路径名称: ${pathName}`);
@@ -127,9 +126,9 @@ export class PathManager {
     lineModel.traverse((child) => {
       if (child.isMesh) {
         // 检查mesh的名称是否包含路径信息
-        if (child.name && child.name.includes('Path_Lin_')) {
+        if (child.name) {
           const parts = child.name.split('_');
-          const pathName = parts[parts.length - 1];
+          const pathName = parts[0];
           
           if (pathName) {
             console.log(`✅ 找到OBJ路径: ${child.name} -> 路径名称: ${pathName}`);
@@ -256,15 +255,15 @@ export class PathManager {
       
       // 解析OBJ文件内容
       const pathData = this.parseOBJText(text);
-      
+      debugger;
       let foundCount = 0;
       
       // 为每个路径创建样条曲线
       for (const path of pathData) {
         if (path.vertices.length >= 2) {
-          // 提取路径名称最后一个"_"后的字符串作为存储名
+          // 提取路径名称第一个"_"前的字符串作为存储名
           const parts = path.name.split('_');
-          const storageName = parts[parts.length - 1];
+          const storageName = parts[0];
           
           console.log(`✅ 解析路径: ${path.name} -> 存储名: ${storageName}, 顶点数: ${path.vertices.length}`);
           try {

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iframe通讯演示页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #4facfe;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(86, 171, 47, 0.3);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(240, 147, 251, 0.3);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.3);
+        }
+
+
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status.connected {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .status.disconnected {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .iframe-container {
+            margin-top: 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .iframe-container iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 iframe通讯演示</h1>
+            <p>与3D场景进行实时数据交互</p>
+            <p style="font-size: 0.9em; opacity: 0.8; margin-top: 5px;">
+                💡 提示：请先发送数据，然后在3D场景中鼠标移入模型查看标签效果
+            </p>
+            <span class="status disconnected" id="connectionStatus">未连接</span>
+        </div>
+
+        <div class="content">
+            <!-- 多设备数据发送区域 -->
+            <div class="section">
+                <h2>🚀 多设备数据发送</h2>
+                <div class="form-group">
+                    <label for="deviceData">设备数据 (JSON格式):</label>
+                    <textarea id="deviceData" placeholder='[{"deviceid": 3423, "data": {"title": "设备标题", "configs": [{"label": "属性1", "value": "值1"}]}}]'>[
+  {
+    "deviceid": "Mesh_equipment_mtl",
+    "data": {
+      "title": "设备信息",
+      "configs": [
+        {"label": "设备类型", "value": "工业设备"},
+        {"label": "状态", "value": "运行中"},
+        {"label": "温度", "value": "65°C"},
+        {"label": "压力", "value": "2.3 MPa"}
+      ]
+    }
+  },
+  {
+    "deviceid": "Mesh_equipment_ktwj",
+    "data": {
+      "title": "结构信息",
+      "configs": [
+        {"label": "结构类型", "value": "钢结构"},
+        {"label": "材料", "value": "Q235B"},
+        {"label": "高度", "value": "12.5m"},
+        {"label": "重量", "value": "8.2t"}
+      ]
+    }
+  }
+]</textarea>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="sendDeviceData()">发送设备数据</button>
+                </div>
+            </div>
+
+            <!-- 机械臂控制区域 -->
+            <div class="section">
+                <h2>🤖 机械臂路径控制</h2>
+                <div class="form-group">
+                    <label for="robotArmModel">机械臂编号:</label>
+                    <input type="text" id="robotArmModel" placeholder="例如: 03" value="03">
+                </div>
+                <div class="form-group">
+                    <label for="robotArmPath">路径名称:</label>
+                    <input type="text" id="robotArmPath" placeholder="例如: D-M" value="D-M">
+                </div>
+                <div class="form-group">
+                    <label for="robotArmDuration">移动时间 (毫秒):</label>
+                    <input type="number" id="robotArmDuration" placeholder="5000" value="5000" min="1000" max="30000">
+                </div>
+                <div class="form-group">
+                    <label for="robotArmEasing">缓动函数:</label>
+                    <select id="robotArmEasing">
+                        <option value="linear">线性</option>
+                        <option value="easeIn">缓入</option>
+                        <option value="easeOut">缓出</option>
+                        <option value="easeInOut" selected>缓入缓出</option>
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-success" onclick="sendRobotArmControl()">开始移动</button>
+                    <button class="btn btn-warning" onclick="sendRobotArmStop()">停止移动</button>
+                    <button class="btn btn-info" onclick="sendRobotArmReset()">重置位置</button>
+                </div>
+            </div>
+
+
+            <!-- 3D场景iframe -->
+            <div class="section">
+                <h2>🎮 3D场景</h2>
+                <div class="iframe-container">
+                    <iframe id="sceneFrame" src="https://chenhaiqiang32.github.io/taobaorm_W2E---MLUX/" title="3D场景"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面元素
+        const connectionStatus = document.getElementById('connectionStatus');
+        const sceneFrame = document.getElementById('sceneFrame');
+
+        // 监听iframe加载完成
+        sceneFrame.addEventListener('load', function() {
+            updateConnectionStatus(true);
+        });
+
+        // 监听来自iframe的消息
+        window.addEventListener('message', function(event) {
+            // 安全检查：只接受来自iframe源的消息
+            if (event.origin !== 'https://chenhaiqiang32.github.io/taobaorm_W2E---MLUX/') {
+                return;
+            }
+        });
+
+        // 发送多设备数据
+        function sendDeviceData() {
+            try {
+                const deviceDataText = document.getElementById('deviceData').value;
+                const deviceData = JSON.parse(deviceDataText);
+                
+                // 验证数据格式
+                if (!Array.isArray(deviceData)) {
+                    throw new Error('数据必须是数组格式');
+                }
+                
+                // 验证每个设备数据
+                deviceData.forEach((device, index) => {
+                    if (!device.deviceid || !device.data) {
+                        throw new Error(`第${index + 1}个设备数据格式错误，必须包含deviceid和data字段`);
+                    }
+                    if (!device.data.title || !Array.isArray(device.data.configs)) {
+                        throw new Error(`第${index + 1}个设备数据格式错误，data必须包含title和configs字段`);
+                    }
+                });
+                
+                sendMessage('deviceData', deviceData);
+            } catch (error) {
+                alert('数据格式错误: ' + error.message);
+            }
+        }
+
+        // 发送机械臂控制消息
+        function sendRobotArmControl() {
+            try {
+                const model = document.getElementById('robotArmModel').value.trim();
+                const line = document.getElementById('robotArmPath').value.trim();
+                const duration = parseInt(document.getElementById('robotArmDuration').value);
+                const easing = document.getElementById('robotArmEasing').value;
+                
+                // 验证输入
+                if (!model) {
+                    throw new Error('请输入机械臂编号');
+                }
+                if (!line) {
+                    throw new Error('请输入路径名称');
+                }
+                if (isNaN(duration) || duration < 1000 || duration > 30000) {
+                    throw new Error('移动时间必须在1000-30000毫秒之间');
+                }
+                
+                // 构建控制数据
+                const controlData = {
+                    model: model,
+                    line: line,
+                    options: {
+                        duration: duration,
+                        easing: easing,
+                        loop: false,
+                        reverse: false
+                    }
+                };
+                
+                console.log('🤖 发送机械臂控制消息:', controlData);
+                sendMessage('robotArmControl', controlData);
+                
+                // 显示成功消息
+                showMessage(`机械臂 ${model} 开始沿路径 ${line} 移动`, 'success');
+                
+            } catch (error) {
+                alert('机械臂控制数据错误: ' + error.message);
+            }
+        }
+
+        // 停止机械臂移动
+        function sendRobotArmStop() {
+            try {
+                const model = document.getElementById('robotArmModel').value.trim();
+                
+                if (!model) {
+                    throw new Error('请输入机械臂编号');
+                }
+                
+                // 构建停止控制数据
+                const controlData = {
+                    model: model,
+                    action: 'stop'
+                };
+                
+                console.log('⏹️ 发送机械臂停止消息:', controlData);
+                sendMessage('robotArmStop', controlData);
+                
+                showMessage(`机械臂 ${model} 移动已停止`, 'info');
+                
+            } catch (error) {
+                alert('停止机械臂失败: ' + error.message);
+            }
+        }
+
+        // 重置机械臂位置
+        function sendRobotArmReset() {
+            try {
+                const model = document.getElementById('robotArmModel').value.trim();
+                
+                if (!model) {
+                    throw new Error('请输入机械臂编号');
+                }
+                
+                // 构建重置控制数据
+                const controlData = {
+                    model: model,
+                    action: 'reset'
+                };
+                
+                console.log('🔄 发送机械臂重置消息:', controlData);
+                sendMessage('robotArmReset', controlData);
+                
+                showMessage(`机械臂 ${model} 已重置到原始位置`, 'info');
+                
+            } catch (error) {
+                alert('重置机械臂失败: ' + error.message);
+            }
+        }
+        // 发送消息到iframe
+        function sendMessage(type, data) {
+            if (!sceneFrame.contentWindow) {
+                alert('iframe未加载完成');
+                return;
+            }
+
+            const message = {
+                type,
+                data
+            };
+
+            try {
+                sceneFrame.contentWindow.postMessage(message, 'https://chenhaiqiang32.github.io/taobaorm_W2E---MLUX');
+            } catch (error) {
+                alert('发送消息失败: ' + error.message);
+            }
+        }
+
+        // 更新连接状态
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                connectionStatus.textContent = '已连接';
+                connectionStatus.className = 'status connected';
+            } else {
+                connectionStatus.textContent = '未连接';
+                connectionStatus.className = 'status disconnected';
+            }
+        }
+
+        // 显示消息提示
+        function showMessage(message, type = 'info') {
+            // 创建消息元素
+            const messageEl = document.createElement('div');
+            messageEl.className = `status ${type}`;
+            messageEl.textContent = message;
+            messageEl.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 1000;
+                padding: 10px 15px;
+                border-radius: 5px;
+                font-size: 14px;
+                max-width: 300px;
+                word-wrap: break-word;
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            // 添加动画样式
+            if (!document.getElementById('messageAnimation')) {
+                const style = document.createElement('style');
+                style.id = 'messageAnimation';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(messageEl);
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                if (messageEl.parentNode) {
+                    messageEl.parentNode.removeChild(messageEl);
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
