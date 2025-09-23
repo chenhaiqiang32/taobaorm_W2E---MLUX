@@ -43,74 +43,10 @@ export class PathManager {
         console.warn('❌ OBJ文件解析失败');
         return false;
       }
-    } else {
-      // 处理GLB模型对象
-      this.parsePaths(lineModelOrPath);
-      this.isInitialized = true;
-      console.log(`✅ 路径管理器初始化完成，找到 ${this.paths.size} 条路径`);
-      return true;
     }
   }
 
-  /**
-   * 解析路径模型
-   * @param {THREE.Object3D} lineModel - Line模型对象
-   */
-  parsePaths(lineModel) {
-    console.log('🔍 开始解析路径模型...');
-    
-      let foundCount = 0;
-      // 遍历所有子对象
-    lineModel.traverse((child) => {
-      if (child.isMesh && child.name && child.name.includes('Path_Lin_')) {
-        // 提取路径名称（第一个"_"前的部分）
-        const parts = child.name.split('_');
-        const pathName = parts[0];
-        
-        if (pathName) {
-          console.log(`✅ 找到路径: ${child.name} -> 路径名称: ${pathName}`);
-          
-          try {
-            // 生成样条曲线
-            const curve = this.generateSplineCurve(child);
-            
-            if (curve) {
-              // 存储样条曲线
-              this.paths.set(pathName, curve);
-              
-              // 创建路径数据
-              const pathData = {
-                name: pathName,
-                originalName: child.name,
-                curve: curve,
-                mesh: child,
-                length: curve.getLength(),
-                points: this.extractPathPoints(child),
-                boundingBox: this.calculatePathBoundingBox(child)
-              };
-              
-              this.pathData.set(pathName, pathData);
-              foundCount++;
-              
-              console.log(`  - 路径长度: ${pathData.length.toFixed(2)}`);
-              console.log(`  - 路径点数: ${pathData.points.length}`);
-            }
-          } catch (error) {
-            console.error(`❌ 生成路径 ${pathName} 的样条曲线失败:`, error);
-          }
-        }
-      }
-    });
-    
-    // 如果没有找到Path_Lin_开头的mesh，尝试解析OBJ格式的路径数据
-    if (foundCount === 0) {
-      console.log('🔍 未找到Path_Lin_开头的mesh，尝试解析OBJ格式路径数据...');
-      foundCount = this.parseOBJPaths(lineModel);
-    }
-    
-    console.log(`📊 路径解析完成，共找到 ${foundCount} 条路径`);
-    this.logPaths();
-  }
+
 
   /**
    * 解析OBJ格式的路径数据
@@ -255,15 +191,12 @@ export class PathManager {
       
       // 解析OBJ文件内容
       const pathData = this.parseOBJText(text);
-      debugger;
       let foundCount = 0;
-      
       // 为每个路径创建样条曲线
       for (const path of pathData) {
         if (path.vertices.length >= 2) {
           // 提取路径名称第一个"_"前的字符串作为存储名
-          const parts = path.name.split('_');
-          const storageName = parts[0];
+          const storageName = path.name;
           
           console.log(`✅ 解析路径: ${path.name} -> 存储名: ${storageName}, 顶点数: ${path.vertices.length}`);
           try {

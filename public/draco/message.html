@@ -225,6 +225,19 @@
         </div>
 
         <div class="content">
+            <!-- iframe配置区域 -->
+            <div class="section">
+                <h2>⚙️ iframe配置</h2>
+                <div class="form-group">
+                    <label for="iframeUrl">3D场景地址:</label>
+                    <input type="url" id="iframeUrl" placeholder="https://example.com/3d-scene/" value="http://localhost:5173">
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-info" onclick="updateIframeFromInput()">更新iframe地址</button>
+                    <button class="btn btn-warning" onclick="resetIframeConfig()">重置为默认地址</button>
+                </div>
+            </div>
+
             <!-- 多设备数据发送区域 -->
             <div class="section">
                 <h2>🚀 多设备数据发送</h2>
@@ -271,7 +284,7 @@
                 </div>
                 <div class="form-group">
                     <label for="robotArmPath">路径名称:</label>
-                    <input type="text" id="robotArmPath" placeholder="例如: D-M" value="D-M">
+                    <input type="text" id="robotArmPath" placeholder="例如: D_M" value="D_M">
                 </div>
                 <div class="form-group">
                     <label for="robotArmDuration">移动时间 (毫秒):</label>
@@ -298,16 +311,58 @@
             <div class="section">
                 <h2>🎮 3D场景</h2>
                 <div class="iframe-container">
-                    <iframe id="sceneFrame" src="https://chenhaiqiang32.github.io/taobaorm_W2E---MLUX/" title="3D场景"></iframe>
+                    <iframe id="sceneFrame" src="" title="3D场景"></iframe>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        // 配置对象 - 集中管理iframe地址
+        const CONFIG = {
+            iframeUrl: 'http://localhost:5173'
+        };
+
+        // 更新iframe配置的函数
+        function updateIframeConfig(newUrl) {
+            CONFIG.iframeUrl = newUrl;
+            sceneFrame.src = CONFIG.iframeUrl;
+            updateConnectionStatus(false);
+            console.log('🔄 iframe地址已更新为:', newUrl);
+        }
+
+        // 从输入框更新iframe地址
+        function updateIframeFromInput() {
+            const newUrl = document.getElementById('iframeUrl').value.trim();
+            if (!newUrl) {
+                alert('请输入有效的URL地址');
+                return;
+            }
+            
+            // 简单的URL验证
+            try {
+                new URL(newUrl);
+                updateIframeConfig(newUrl);
+                showMessage('iframe地址已更新', 'success');
+            } catch (error) {
+                alert('请输入有效的URL地址');
+            }
+        }
+
+        // 重置为默认地址
+        function resetIframeConfig() {
+            const defaultUrl = 'http://localhost:5173';
+            document.getElementById('iframeUrl').value = defaultUrl;
+            updateIframeConfig(defaultUrl);
+            showMessage('已重置为默认地址', 'info');
+        }
+
         // 页面元素
         const connectionStatus = document.getElementById('connectionStatus');
         const sceneFrame = document.getElementById('sceneFrame');
+
+        // 设置iframe源地址
+        sceneFrame.src = CONFIG.iframeUrl;
 
         // 监听iframe加载完成
         sceneFrame.addEventListener('load', function() {
@@ -317,7 +372,7 @@
         // 监听来自iframe的消息
         window.addEventListener('message', function(event) {
             // 安全检查：只接受来自iframe源的消息
-            if (event.origin !== 'https://chenhaiqiang32.github.io/taobaorm_W2E---MLUX/') {
+            if (event.origin !== CONFIG.iframeUrl) {
                 return;
             }
         });
@@ -453,7 +508,7 @@
             };
 
             try {
-                sceneFrame.contentWindow.postMessage(message, 'https://chenhaiqiang32.github.io/taobaorm_W2E---MLUX');
+                sceneFrame.contentWindow.postMessage(message, CONFIG.iframeUrl);
             } catch (error) {
                 alert('发送消息失败: ' + error.message);
             }

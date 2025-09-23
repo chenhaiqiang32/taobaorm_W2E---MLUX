@@ -217,9 +217,6 @@ function initScene() {
  * 设置模型和场景
  */
 function setupModelAndScene(scene) {
-  // 定义物体向右偏移量
-  const sceneOffset = new THREE.Vector3(4, 0, 0);
-
   loadAllModels(scene, raycasterManager)
     .then((models) => {
       // 获取第一个模型（如果只加载一个模型的话）
@@ -234,9 +231,6 @@ function setupModelAndScene(scene) {
         isControlCenter,
         modelName,
       } = models[0]; // 从数组中获取第一个模型
-
-      // 移动模型
-      model.position.add(sceneOffset);
 
       // 设置动画管理器
       animationManager.setMixer(loadedMixer, animations);
@@ -271,7 +265,7 @@ function setupModelAndScene(scene) {
 
       // 计算地面位置
       const groundCenter = new THREE.Vector3(
-        center.x + sceneOffset.x,
+        center.x,
         boundingBox.min.y - radius,
         center.z
       );
@@ -280,16 +274,15 @@ function setupModelAndScene(scene) {
       groundEffect.initModel(groundCenter, radius);
 
       // 根据模型位置动态调整灯光配置
-      const adjustedLightConfig = getAdjustedLightConfig(center, radius, sceneOffset);
+      const adjustedLightConfig = getAdjustedLightConfig(center, radius);
       lightingManager.loadFromConfig(adjustedLightConfig);
 
       // 设置射线检测事件监听器
       raycasterManager.setupEventListeners('all');
 
-      console.log("物体向右平移完成:", {
-        物体偏移量: sceneOffset,
-        物体新位置: model.position,
-        原始中心保持: center,
+      console.log("模型加载完成:", {
+        模型位置: model.position,
+        模型中心: center,
         相机位置: cameraManager.getCamera().position,
         相机朝向: center,
         控制器目标: cameraManager.getControls().target,

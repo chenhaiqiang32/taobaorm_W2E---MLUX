@@ -118,7 +118,7 @@ export class MessageHandlerManager {
         pathType: pathManager.getPath(line)?.constructor.name
       });
       
-      // 开始移动
+      // 开始移动（机械臂会自动朝向移动方向）
       const success = movementController.startMovement(model, line, {
         ...options,
         onStart: (robotArmId, pathName) => {
@@ -126,20 +126,30 @@ export class MessageHandlerManager {
           const robotArm = robotArmManager.getRobotArm(robotArmId);
           if (robotArm) {
             const startPosition = robotArm.position;
+            const robotArmData = robotArmManager.getRobotArmData(robotArmId);
             console.log(`✅ 机械臂 ${robotArmId} 开始沿路径 ${pathName} 移动`);
             console.log(`🚀 起始位置: (${startPosition.x.toFixed(3)}, ${startPosition.y.toFixed(3)}, ${startPosition.z.toFixed(3)})`);
+            console.log(`🧭 机械臂将自动朝向移动方向`);
+            
+            if (robotArmData && robotArmData.boundingBox) {
+              const boundingBox = robotArmData.boundingBox;
+              console.log(`📦 机械臂包围盒: 中心(${boundingBox.center.x.toFixed(3)}, ${boundingBox.center.y.toFixed(3)}, ${boundingBox.center.z.toFixed(3)}) 大小(${boundingBox.size.x.toFixed(3)} x ${boundingBox.size.y.toFixed(3)} x ${boundingBox.size.z.toFixed(3)})`);
+              console.log(`🎯 机械臂将使用底部中心点对齐路径`);
+            }
           } else {
             console.log(`✅ 机械臂 ${robotArmId} 开始沿路径 ${pathName} 移动`);
+            console.log(`🧭 机械臂将自动朝向移动方向`);
           }
           
           if (options.onStart) options.onStart(robotArmId, pathName);
         },
         onUpdate: (robotArmId, pathName, progress, elapsed) => {
-          // 实时打印机械臂位置信息
+          // 实时打印机械臂位置和朝向信息
           const robotArm = robotArmManager.getRobotArm(robotArmId);
           if (robotArm) {
             const position = robotArm.position;
-            console.log(`📍 机械臂 ${robotArmId} 位置: (${position.x.toFixed(3)}, ${position.y.toFixed(3)}, ${position.z.toFixed(3)}) - 进度: ${(progress * 100).toFixed(1)}% - 耗时: ${elapsed.toFixed(2)}s`);
+            const rotation = robotArm.rotation;
+            console.log(`📍 机械臂 ${robotArmId} 位置: (${position.x.toFixed(3)}, ${position.y.toFixed(3)}, ${position.z.toFixed(3)}) - 朝向: (${rotation.x.toFixed(3)}, ${rotation.y.toFixed(3)}, ${rotation.z.toFixed(3)}) - 进度: ${(progress * 100).toFixed(1)}% - 耗时: ${elapsed.toFixed(2)}s`);
           }
           
           if (options.onUpdate) options.onUpdate(robotArmId, pathName, progress, elapsed);

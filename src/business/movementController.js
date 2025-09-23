@@ -4,6 +4,7 @@
  */
 
 import * as THREE from 'three';
+import { robotArmManager } from './robotArmManager.js';
 
 export class MovementController {
   constructor() {
@@ -458,6 +459,17 @@ class RobotArmAnimation {
           
           // 创建可视化调试点
           this.createDebugMarker(position, 'path-start');
+          
+          // 创建机械臂顶部点调试标记
+          if (robotArmData && robotArmData.boundingBox) {
+            const boundingBox = robotArmData.boundingBox;
+            const topCenter = new THREE.Vector3(
+              (boundingBox.min.x + boundingBox.max.x) / 2,
+              boundingBox.max.y,
+              (boundingBox.min.z + boundingBox.max.z) / 2
+            );
+            this.createDebugMarker(topCenter, `robot-arm-${this.robotArmId}-top`);
+          }
         }
       
       if (path && robotArm) {
@@ -475,8 +487,23 @@ class RobotArmAnimation {
           tangent = path.getTangent(progress);
         }
         
+        // 只修改X和Z轴位置，保持原模型的Y轴高度，并补偿位置偏移
+        const robotArmData = robotArmManager.getRobotArmData(this.robotArmId);
+        let adjustedPosition = position.clone();
+        
+        if (robotArmData && robotArmData.originalPosition) {
+          // 使用机械臂的原始Y轴位置，只使用路径的X和Z坐标
+          adjustedPosition.y = robotArmData.originalPosition.y;
+          
+          // 补偿机械臂的位置偏移（机械臂后移4个单位的问题）
+          // 假设机械臂朝向X轴正方向，需要向前偏移4个单位
+          adjustedPosition.x = adjustedPosition.x + 4; // 向前偏移4个单位
+          
+          console.log(`🎯 机械臂 ${this.robotArmId} 位置调整: 保持原始Y轴高度 ${robotArmData.originalPosition.y.toFixed(3)}，X轴前移4个单位，使用路径XZ坐标 (${position.x.toFixed(3)}, ${position.z.toFixed(3)})`);
+        }
+        
         // 更新机械臂位置
-        robotArm.position.copy(position);
+        robotArm.position.copy(adjustedPosition);
         
         // 强制更新矩阵，确保位置变化被渲染
         robotArm.updateMatrixWorld(true);
@@ -495,16 +522,52 @@ class RobotArmAnimation {
           const parentInverseMatrix = parentWorldMatrix.invert();
           const localPosition = position.clone().applyMatrix4(parentInverseMatrix);
           
+          // 保持机械臂的原始Y轴位置，只使用路径的X和Z坐标，并补偿位置偏移
+          if (robotArmData && robotArmData.originalPosition) {
+            // 使用机械臂的原始Y轴位置
+            localPosition.y = robotArmData.originalPosition.y;
+            
+            // 补偿机械臂的位置偏移（机械臂后移4个单位的问题）
+            // 假设机械臂朝向X轴正方向，需要向前偏移4个单位
+            localPosition.x = localPosition.x + 88; // 向前偏移4个单位
+            
+            console.log(`📏 机械臂 ${this.robotArmId} 保持原始Y轴高度: ${robotArmData.originalPosition.y.toFixed(3)}，X轴前移4个单位，使用路径XZ坐标`);
+          }
+          
           // 设置本地位置
           robotArm.position.copy(localPosition);
           robotArm.updateMatrixWorld(true);
           
-          console.log(`🔄 使用父级坐标转换: 世界坐标 -> 本地坐标`);
+          console.log(`🔄 使用父级坐标转换: 世界坐标 -> 本地坐标，保持原始Y轴高度`);
         }
         
-        // 可选：更新机械臂朝向（沿路径切线方向）
-        if (progress < 1 && tangent) {
-          robotArm.lookAt(robotArm.position.clone().add(tangent));
+        // 更新机械臂朝向（沿路径切线方向）
+        if (progress < 1 && tangent && tangent.length() > 0) {
+          // 确保切线向量已标准化
+          const normalizedTangent = tangent.clone().normalize();
+          
+          // 检查标准化后的向量是否有效
+          if (normalizedTangent.length() > 0) {
+            // 改进的朝向计算：使用更精确的方法
+            this.updateRobotArmRotation(robotArm, normalizedTangent, progress);
+            
+            // 创建方向箭头调试标记（仅在开始时创建一次）
+            if (progress === 0) {
+              this.createDebugMarker(
+                robotArm.position.clone(), 
+                `robot-arm-${this.robotArmId}-direction`, 
+                'arrow', 
+                normalizedTangent.clone().multiplyScalar(2)
+              );
+            }
+            
+            // 调试日志（仅在需要时输出，避免日志过多）
+            if (Math.floor(progress * 100) % 10 === 0) { // 每10%进度输出一次
+              console.log(`🧭 机械臂 ${this.robotArmId} 朝向更新: 切线方向 (${normalizedTangent.x.toFixed(3)}, ${normalizedTangent.y.toFixed(3)}, ${normalizedTangent.z.toFixed(3)}) - 进度: ${(progress * 100).toFixed(1)}%`);
+            }
+          } else {
+            console.warn(`⚠️ 机械臂 ${this.robotArmId} 切线向量无效，跳过朝向更新`);
+          }
         }
         
         // 调试信息：打印实际位置和路径位置
@@ -527,29 +590,158 @@ class RobotArmAnimation {
   }
 
   /**
+   * 更新机械臂旋转（改进的朝向计算）
+   * @param {THREE.Object3D} robotArm - 机械臂对象
+   * @param {THREE.Vector3} direction - 目标方向向量
+   * @param {number} progress - 移动进度
+   */
+  updateRobotArmRotation(robotArm, direction, progress) {
+    try {
+      // 方法1：使用四元数进行平滑旋转
+      const targetQuaternion = new THREE.Quaternion();
+      
+      // 计算目标旋转四元数
+      // 机械臂的默认朝向是X轴正方向，需要旋转90度到Z轴正方向
+      const defaultDirection = new THREE.Vector3(1, 0, 0); // 机械臂默认朝向X轴正方向
+      const rotationQuaternion = new THREE.Quaternion();
+      
+      // 计算从默认方向到目标方向的旋转
+      rotationQuaternion.setFromUnitVectors(defaultDirection, direction);
+      
+      // 如果机械臂有父级，需要考虑父级的旋转
+      if (robotArm.parent) {
+        // 获取父级的世界旋转
+        const parentWorldQuaternion = new THREE.Quaternion();
+        robotArm.parent.getWorldQuaternion(parentWorldQuaternion);
+        
+        // 计算相对于父级的本地旋转
+        const parentInverseQuaternion = parentWorldQuaternion.clone().invert();
+        targetQuaternion.multiplyQuaternions(parentInverseQuaternion, rotationQuaternion);
+      } else {
+        targetQuaternion.copy(rotationQuaternion);
+      }
+      
+      // 应用旋转（使用平滑插值避免突变）
+      const currentQuaternion = robotArm.quaternion.clone();
+      const lerpFactor = 0.1; // 插值因子，可以调整平滑度
+      robotArm.quaternion.slerp(targetQuaternion, lerpFactor);
+      
+      // 强制更新矩阵
+      robotArm.updateMatrixWorld(true);
+      
+      // 方法2：备用方法 - 使用lookAt（如果四元数方法有问题）
+      if (progress === 0) {
+        // 在开始时也尝试lookAt方法作为备用
+        const targetPosition = robotArm.position.clone().add(direction);
+        robotArm.lookAt(targetPosition);
+        
+        // 如果机械臂默认朝向是X轴，需要额外旋转90度
+        robotArm.rotateY(Math.PI / 2); // 绕Y轴旋转90度
+        
+        robotArm.updateMatrixWorld(true);
+      }
+      
+    } catch (error) {
+      console.error('更新机械臂旋转时出错:', error);
+      
+      // 回退到简单的lookAt方法
+      try {
+        const targetPosition = robotArm.position.clone().add(direction);
+        robotArm.lookAt(targetPosition);
+        
+        // 如果机械臂默认朝向是X轴，需要额外旋转90度
+        robotArm.rotateY(Math.PI / 2); // 绕Y轴旋转90度
+        
+        robotArm.updateMatrixWorld(true);
+      } catch (fallbackError) {
+        console.error('回退方法也失败:', fallbackError);
+      }
+    }
+  }
+
+  /**
    * 创建可视化调试标记
    * @param {THREE.Vector3} position - 位置
    * @param {string} label - 标签
+   * @param {string} type - 标记类型：'point', 'arrow', 'box'
+   * @param {THREE.Vector3} direction - 方向向量（用于箭头标记）
    */
-  createDebugMarker(position, label) {
+  createDebugMarker(position, label, type = 'point', direction = null) {
     try {
       // 动态导入THREE
       import('three').then(THREE => {
-        // 创建一个小球作为调试点
-        const geometry = new THREE.SphereGeometry(0.1, 8, 6);
-        const material = new THREE.MeshBasicMaterial({ 
-          color: 0xff0000, 
-          transparent: true, 
-          opacity: 0.8 
-        });
-        const marker = new THREE.Mesh(geometry, material);
+        let marker;
+        let color = 0xff0000; // 默认红色
+        
+        // 根据标签设置不同颜色
+        if (label.includes('path')) {
+          color = 0x00ff00; // 绿色 - 路径点
+        } else if (label.includes('robot-arm')) {
+          color = 0x0000ff; // 蓝色 - 机械臂点
+        } else if (label.includes('direction')) {
+          color = 0xffff00; // 黄色 - 方向标记
+        }
+        
+        switch (type) {
+          case 'arrow':
+            if (direction) {
+              // 创建箭头标记
+              const arrowHelper = new THREE.ArrowHelper(
+                direction.normalize(),
+                position,
+                direction.length() * 2,
+                color,
+                0.2,
+                0.1
+              );
+              marker = arrowHelper;
+              marker.name = `debug-arrow-${label}`;
+            } else {
+              // 回退到点标记
+              const geometry = new THREE.SphereGeometry(0.1, 8, 6);
+              const material = new THREE.MeshBasicMaterial({ 
+                color: color, 
+                transparent: true, 
+                opacity: 0.8 
+              });
+              marker = new THREE.Mesh(geometry, material);
+              marker.name = `debug-marker-${label}`;
+            }
+            break;
+            
+          case 'box':
+            // 创建盒子标记
+            const boxGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            const boxMaterial = new THREE.MeshBasicMaterial({ 
+              color: color, 
+              transparent: true, 
+              opacity: 0.6,
+              wireframe: true
+            });
+            marker = new THREE.Mesh(boxGeometry, boxMaterial);
+            marker.name = `debug-box-${label}`;
+            break;
+            
+          case 'point':
+          default:
+            // 创建点标记
+            const geometry = new THREE.SphereGeometry(0.1, 8, 6);
+            const material = new THREE.MeshBasicMaterial({ 
+              color: color, 
+              transparent: true, 
+              opacity: 0.8 
+            });
+            marker = new THREE.Mesh(geometry, material);
+            marker.name = `debug-marker-${label}`;
+            break;
+        }
+        
         marker.position.copy(position);
-        marker.name = `debug-marker-${label}`;
         
         // 添加到场景中
         if (window.scene) {
           window.scene.add(marker);
-          console.log(`🎯 创建调试标记 ${label} 在位置: (${position.x.toFixed(3)}, ${position.y.toFixed(3)}, ${position.z.toFixed(3)})`);
+          console.log(`🎯 创建调试标记 ${label} (${type}) 在位置: (${position.x.toFixed(3)}, ${position.y.toFixed(3)}, ${position.z.toFixed(3)})`);
         }
       });
     } catch (error) {
