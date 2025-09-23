@@ -206,10 +206,10 @@ export class PathManager {
             
             // 计算路径长度，确定均匀分布的点数
             const pathLength = curve.getLength();
-            const uniformPointCount = Math.max(50, Math.floor(pathLength * 2));
+            const uniformPointCount = Math.max(50, Math.floor(pathLength * 3.2));
             
             // 生成均匀分布的点
-            const uniformPoints = curve.getPoints(uniformPointCount);
+            const uniformPoints = curve.getSpacedPoints(uniformPointCount);
             
             // 创建新的样条曲线，使用均匀分布的点
             const uniformCurve = new THREE.CatmullRomCurve3(uniformPoints);
