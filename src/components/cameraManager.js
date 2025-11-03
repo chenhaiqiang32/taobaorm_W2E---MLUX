@@ -82,6 +82,7 @@ export class CameraManager {
     this.controls.enableDamping = enableDamping;
     this.controls.dampingFactor = dampingFactor;
     this.controls.maxPolarAngle = Math.PI / 2;
+   this.controls.maxDistance = 100
     this.controls.target.copy(target);
     this.controls.update();
 
