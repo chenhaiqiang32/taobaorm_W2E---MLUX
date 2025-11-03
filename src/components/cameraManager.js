@@ -77,6 +77,7 @@ export class CameraManager {
     this.controls = new OrbitControls(this.camera, renderer.domElement);
     this.controls.enableDamping = enableDamping;
     this.controls.dampingFactor = dampingFactor;
+    this.controls.maxPolarAngle = Math.PI / 2;
     this.controls.target.copy(target);
     this.controls.update();
 
