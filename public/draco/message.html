@@ -230,7 +230,7 @@
                 <h2>⚙️ iframe配置</h2>
                 <div class="form-group">
                     <label for="iframeUrl">3D场景地址:</label>
-                    <input type="url" id="iframeUrl" placeholder="https://example.com/3d-scene/" value="http://localhost:5173">
+                    <input type="url" id="iframeUrl" placeholder="https://example.com/3d-scene/" value="https://chenhaiqiang32.github.io/taobaorm_W2E---MLUX/">
                 </div>
                 <div class="button-group">
                     <button class="btn btn-info" onclick="updateIframeFromInput()">更新iframe地址</button>
@@ -355,7 +355,7 @@
     <script>
         // 配置对象 - 集中管理iframe地址
         const CONFIG = {
-            iframeUrl: 'http://localhost:5173'
+            iframeUrl: 'https://chenhaiqiang32.github.io/taobaorm_W2E---MLUX/'
         };
 
         // 更新iframe配置的函数
@@ -386,7 +386,7 @@
 
         // 重置为默认地址
         function resetIframeConfig() {
-            const defaultUrl = 'http://localhost:5173';
+            const defaultUrl = 'https://chenhaiqiang32.github.io/taobaorm_W2E---MLUX';
             document.getElementById('iframeUrl').value = defaultUrl;
             updateIframeConfig(defaultUrl);
             showMessage('已重置为默认地址', 'info');
