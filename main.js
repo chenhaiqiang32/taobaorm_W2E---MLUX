@@ -18,7 +18,7 @@ import { RaycasterManager } from "./src/components/raycasterManager.js";
 import { CSS2DManager } from "./src/components/css2dManager.js";
 import { MessageManager } from "./src/components/messageManager.js";
 import { PostprocessingManager } from "./src/components/postprocessingManager.js";
-import { setCSS2DManager, setMessageManager, setPostprocessingManager } from "./src/assets/raycasterConfig.js";
+import { setCSS2DManager, setMessageManager, setPostprocessingManager, setSceneManager } from "./src/assets/raycasterConfig.js";
 import { handleDeviceClick, getCurrentSelectedDevice, setManagers, clearAllSelections } from "./src/business/deviceDataManager.js";
 import { createGroupLabels } from "./src/business/index.js";
 import { HighlightEffectsManager } from "./src/components/highlightEffectsManager.js";
@@ -200,6 +200,9 @@ function initScene() {
   
   // 设置后处理管理器引用
   setPostprocessingManager(postprocessingManager);
+  
+  // 设置场景管理器引用
+  setSceneManager(sceneManager);
 
   // 设置设备数据管理器引用
   setManagers(postprocessingManager, css2dManager, cameraManager, highlightEffectsManager);

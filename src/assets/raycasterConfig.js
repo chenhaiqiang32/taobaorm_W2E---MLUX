@@ -140,6 +140,15 @@ export function setPostprocessingManager(postprocessingManager) {
   setManagers(postprocessingManager, css2dManager);
 }
 
+/**
+ * 设置场景管理器引用
+ * @param {SceneManager} sceneManager - 场景管理器实例
+ */
+export function setSceneManager(sceneManager) {
+  // 同时设置到业务模块的消息处理器管理器
+  messageHandlerManager.setSceneManager(sceneManager);
+}
+
 
 /**
  * 显示设备信息（鼠标移入）

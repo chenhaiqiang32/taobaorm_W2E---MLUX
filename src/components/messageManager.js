@@ -251,6 +251,15 @@ export class MessageManager {
       }
     });
     
+    // 注册环境切换处理器
+    this.onMessage('switchEnvironment', (data) => {
+      if (handlers.switchEnvironment) {
+        handlers.switchEnvironment(data);
+      } else {
+        console.log('handlers.switchEnvironment不存在');
+      }
+    });
+    
     console.log('📝 所有raycaster消息处理器注册完成');
   }
 

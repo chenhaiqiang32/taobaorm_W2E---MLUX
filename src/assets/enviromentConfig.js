@@ -59,6 +59,78 @@ export const environmentPresets = {
 };
 
 /**
+ * 可切换的 HDR 环境预设列表
+ */
+export const availableHDRPresets = [
+  {
+    id: 'royal_esplanade',
+    name: 'Royal Esplanade',
+    description: '皇家大道黄昏',
+    type: 'hdr',
+    enabled: true,
+    hdrPath: './hdr/royal_esplanade_1k.hdr',
+    fallbackPath: './hdr/royal_esplanade_1k.hdr',
+    intensity: 1.0,
+    exposure: 1.0
+  },
+  {
+    id: 'dutch_sky',
+    name: 'Dutch Sky',
+    description: '荷兰天空',
+    type: 'hdr',
+    enabled: true,
+    hdrPath: './hdr/Dutch-Sky_0168_4k.hdr',
+    fallbackPath: './hdr/Dutch-Sky_0168_4k.hdr',
+    intensity: 1.0,
+    exposure: 1.0
+  },
+  {
+    id: 'la_downtown',
+    name: 'LA Downtown',
+    description: '洛杉矶市中心',
+    type: 'hdr',
+    enabled: true,
+    hdrPath: './hdr/sIBL-LA_Downtown_Afternoon_Fishing_3k.hdr',
+    fallbackPath: './hdr/sIBL-LA_Downtown_Afternoon_Fishing_3k.hdr',
+    intensity: 1.0,
+    exposure: 1.0
+  },
+  {
+    id: 'venice_sunset',
+    name: 'Venice Sunset',
+    description: '威尼斯日落',
+    type: 'hdr',
+    enabled: true,
+    hdrPath: './hdr/venice_sunset_1k.hdr',
+    fallbackPath: './hdr/venice_sunset_1k.hdr',
+    intensity: 1.0,
+    exposure: 1.0
+  },
+  {
+    id: 'bg',
+    name: 'Background',
+    description: '背景天空',
+    type: 'hdr',
+    enabled: true,
+    hdrPath: './hdr/bg.hdr',
+    fallbackPath: './hdr/bg.hdr',
+    intensity: 1.0,
+    exposure: 1.0
+  },
+  {
+    id: 'sunny2',
+    name: 'Sunny 2',
+    description: '晴朗天空 2',
+    type: 'hdr',
+    enabled: true,
+    hdrPath: './hdr/sunny2.hdr',
+    fallbackPath: './hdr/sunny2.hdr',
+    intensity: 1.0,
+    exposure: 1.0
+  }
+];
+
+/**
  * 默认环境配置
  */
 export const defaultEnvironmentConfig = {
@@ -181,4 +253,21 @@ export function getAvailableEnvironmentPresets() {
     key,
     ...environmentPresets[key]
   }));
+}
+
+/**
+ * 根据ID获取HDR预设
+ * @param {string} presetId - 预设ID
+ * @returns {Object|null} HDR预设配置
+ */
+export function getHDRPresetById(presetId) {
+  return availableHDRPresets.find(preset => preset.id === presetId) || null;
+}
+
+/**
+ * 获取所有可用的HDR预设
+ * @returns {Array} HDR预设列表
+ */
+export function getAvailableHDRPresets() {
+  return availableHDRPresets;
 }

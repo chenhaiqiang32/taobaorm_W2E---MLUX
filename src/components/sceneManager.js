@@ -121,8 +121,8 @@ export class SceneManager {
       return false;
     }
     
-    // 合并配置
-    this.environmentConfig = { ...this.environmentConfig, ...config };
+    // 完全替换配置（而不是合并）
+    this.environmentConfig = { ...config };
     
     // 如果启用环境，则设置环境贴图
     if (this.environmentConfig.enabled) {

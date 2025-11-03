@@ -9,6 +9,8 @@ import { processDeviceData } from './deviceDataManager.js';
 import { robotArmManager } from './robotArmManager.js';
 import { pathManager } from './pathManager.js';
 import { movementController } from './movementController.js';
+// 导入环境配置
+import { getHDRPresetById, getAvailableHDRPresets } from '../assets/enviromentConfig.js';
 
 /**
  * 消息处理器管理器类
@@ -17,6 +19,7 @@ export class MessageHandlerManager {
   constructor() {
     this.messageManager = null;
     this.css2dManager = null;
+    this.sceneManager = null;
   }
 
   /**
@@ -41,6 +44,14 @@ export class MessageHandlerManager {
   }
 
   /**
+   * 设置场景管理器引用
+   * @param {Object} sceneManager - 场景管理器实例
+   */
+  setSceneManager(sceneManager) {
+    this.sceneManager = sceneManager;
+  }
+
+  /**
    * 注册raycaster相关的消息处理器
    */
   registerRaycasterHandlers() {
@@ -54,7 +65,8 @@ export class MessageHandlerManager {
       updateDeviceData: this.updateDeviceData.bind(this),
       robotArmControl: this.robotArmControl.bind(this),
       robotArmStop: this.robotArmStop.bind(this),
-      robotArmReset: this.robotArmReset.bind(this)
+      robotArmReset: this.robotArmReset.bind(this),
+      switchEnvironment: this.switchEnvironment.bind(this)
     });
 
     console.log('📝 Raycaster消息处理器注册完成');
@@ -320,6 +332,71 @@ export class MessageHandlerManager {
     }
     
     return { valid: true };
+  }
+
+  /**
+   * 环境切换处理器
+   * @param {Object} data - 环境切换数据
+   * @returns {Object} 处理结果
+   */
+  switchEnvironment(data) {
+    console.log('🌍 接收到环境切换消息:', data);
+    
+    try {
+      // 验证数据格式
+      if (!data || typeof data !== 'object') {
+        throw new Error('数据必须是对象');
+      }
+      
+      if (!data.presetId || typeof data.presetId !== 'string') {
+        throw new Error('缺少或无效的presetId参数');
+      }
+      
+      const { presetId } = data;
+      
+      // 检查场景管理器是否存在
+      if (!this.sceneManager) {
+        console.error('❌ 场景管理器未设置');
+        throw new Error('场景管理器未设置');
+      }
+      
+      // 获取HDR预设
+      const preset = getHDRPresetById(presetId);
+      if (!preset) {
+        console.error(`❌ HDR预设 ${presetId} 不存在`);
+        const availablePresets = getAvailableHDRPresets();
+        console.log(`📋 可用的HDR预设: [${availablePresets.map(p => p.id).join(', ')}]`);
+        throw new Error(`HDR预设 ${presetId} 不存在`);
+      }
+      
+      console.log(`🌍 切换到HDR预设: ${preset.name} (${preset.description})`);
+      
+      // 更新场景环境配置
+      const success = this.sceneManager.updateEnvironmentConfig(preset);
+      
+      if (success) {
+        console.log(`✅ 环境切换成功: ${preset.name}`);
+        return {
+          success: true,
+          message: `环境已切换至: ${preset.name}`,
+          data: {
+            presetId: preset.id,
+            presetName: preset.name,
+            presetDescription: preset.description
+          }
+        };
+      } else {
+        throw new Error('环境配置更新失败');
+      }
+      
+    } catch (error) {
+      console.error('环境切换处理失败:', error);
+      return {
+        success: false,
+        error: error.message,
+        data: data
+      };
+    }
   }
 
   /**
