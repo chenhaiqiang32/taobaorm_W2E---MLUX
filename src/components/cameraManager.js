@@ -17,6 +17,10 @@ export class CameraManager {
     this.defaultPosition = new THREE.Vector3(0, 14, 24);
     this.defaultTarget = new THREE.Vector3(0, 0, 0);
     
+    // 场景包围盒限制
+    this.minimumY = null; // 场景最低点Y值
+    this.isLimiting = false; // 防止递归调用的标志
+    
     // 动画相关属性
     this.isAnimating = false;
     this.currentAnimation = null;
@@ -80,6 +84,20 @@ export class CameraManager {
     this.controls.maxPolarAngle = Math.PI / 2;
     this.controls.target.copy(target);
     this.controls.update();
+
+    // 添加change事件监听器，限制相机位置不能低于场景最低点
+    // 注意：这里只修改位置值，不调用 update()，避免递归
+    this.controls.addEventListener('change', () => {
+      if (this.minimumY !== null && this.camera && this.controls) {
+        // 直接修改位置，不触发更新，避免递归
+        if (this.camera.position.y < this.minimumY) {
+          this.camera.position.y = this.minimumY;
+        }
+        if (this.controls.target.y < this.minimumY) {
+          this.controls.target.y = this.minimumY;
+        }
+      }
+    });
 
     return this.controls;
   }
@@ -167,11 +185,61 @@ export class CameraManager {
   }
 
   /**
+   * 设置场景包围盒的最低Y值
+   * @param {number} minY - 场景最低点的Y坐标值
+   */
+  setMinimumY(minY) {
+    if (typeof minY === 'number' && !isNaN(minY)) {
+      this.minimumY = minY;
+      console.log(`📐 设置场景最低点限制: Y = ${minY.toFixed(2)}`);
+      // 立即应用限制
+      this.limitCameraPosition();
+    } else {
+      console.warn('无效的最低Y值:', minY);
+    }
+  }
+
+  /**
+   * 限制相机位置，确保不会低于场景最低点
+   */
+  limitCameraPosition() {
+    if (this.minimumY === null) return; // 如果未设置最低点，不进行限制
+    if (this.isLimiting) return; // 如果正在限制中，避免递归调用
+
+    if (this.camera && this.controls) {
+      this.isLimiting = true; // 设置标志，防止递归
+
+      let positionChanged = false;
+      let targetChanged = false;
+
+      // 限制相机位置不能低于场景最低点
+      if (this.camera.position.y < this.minimumY) {
+        this.camera.position.y = this.minimumY;
+        positionChanged = true;
+      }
+
+      // 限制控制器目标点不能低于场景最低点
+      if (this.controls.target.y < this.minimumY) {
+        this.controls.target.y = this.minimumY;
+        targetChanged = true;
+      }
+
+      // 只有在位置或目标发生变化时才更新控制器，且不在change事件中更新
+      // 注意：这里不调用 update()，因为会导致递归
+      // update() 应该由调用者（如 render 循环）负责调用
+
+      this.isLimiting = false; // 清除标志
+    }
+  }
+
+  /**
    * 更新控制器
    */
   update() {
     if (this.controls) {
       this.controls.update();
+      // 在每次更新时也检查位置限制
+      this.limitCameraPosition();
     }
   }
 
@@ -274,6 +342,9 @@ export class CameraManager {
     this.controls.target.lerpVectors(this.startTarget, this.endTarget, easedProgress);
     this.controls.update();
 
+    // 在动画过程中也检查位置限制
+    this.limitCameraPosition();
+
     // 检查动画是否完成
     if (progress >= 1) {
       this.completeAnimation();
@@ -290,6 +361,9 @@ export class CameraManager {
     this.camera.position.copy(this.endPosition);
     this.controls.target.copy(this.endTarget);
     this.controls.update();
+
+    // 在动画完成时也检查位置限制
+    this.limitCameraPosition();
 
     // 如果配置要求，重新启用控制器
     if (this.animationConfig.enableControlsAfterAnimation) {

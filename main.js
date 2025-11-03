@@ -262,6 +262,29 @@ function setupModelAndScene(scene) {
         console.log("⚠️ 自动设置失败，使用默认相机设置");
       }
 
+      // 计算所有模型的合并包围盒，设置场景最低点限制
+      // 防止相机拖动到场景下方
+      if (models && models.length > 0) {
+        // 创建合并包围盒
+        const combinedBoundingBox = new THREE.Box3();
+        
+        // 遍历所有模型，合并包围盒
+        models.forEach((modelData) => {
+          if (modelData.boundingBox) {
+            combinedBoundingBox.union(modelData.boundingBox);
+          }
+        });
+        
+        // 设置场景包围盒最低点限制
+        if (combinedBoundingBox.min) {
+          cameraManager.setMinimumY(combinedBoundingBox.min.y);
+          console.log(`📐 场景包围盒最低点: Y = ${combinedBoundingBox.min.y.toFixed(2)}`);
+        }
+      } else if (boundingBox && boundingBox.min) {
+        // 如果没有多个模型，使用单个模型的包围盒
+        cameraManager.setMinimumY(boundingBox.min.y);
+      }
+
       // 创建地面效果
       const core = { scene: scene };
       groundEffect = new BoxModel(core);
