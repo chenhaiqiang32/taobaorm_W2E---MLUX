@@ -160,6 +160,11 @@ export class SceneManager {
         this.setHDRSky(options);
         break;
 
+      case "background":
+        // 使用普通背景纹理
+        this.setBackgroundTexture(options);
+        break;
+
       case "default":
         // 使用默认环境
         this.scene.background = new THREE.Color(0x87ceeb);
@@ -218,6 +223,44 @@ export class SceneManager {
         console.error("HDR 加载失败:", error);
         console.log("尝试使用备用方案...");
         this.setFallbackSky(options);
+      }
+    );
+  }
+
+  /**
+   * 设置普通背景纹理
+   * @param {Object} options - 配置选项
+   */
+  setBackgroundTexture(options = {}) {
+    console.log("开始加载普通背景纹理...");
+
+    const textureLoader = new THREE.TextureLoader();
+    
+    // 获取背景路径
+    const backgroundPath = options.background?.path || './sunny2.jpg';
+    
+    textureLoader.load(
+      backgroundPath,
+      (texture) => {
+        console.log("背景纹理加载成功:", texture);
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        this.scene.background = texture;
+
+        // 创建环境贴图副本，设置强度
+        const envTexture = texture.clone();
+        envTexture.intensity = options.intensity !== undefined ? options.intensity : 1.0;
+        envTexture.mapping = THREE.EquirectangularReflectionMapping;
+        this.scene.environment = envTexture;
+
+        console.log("背景纹理设置完成，强度:", envTexture.intensity);
+      },
+      undefined,
+      (error) => {
+        console.error("背景纹理加载失败:", error);
+        // 使用默认的天空颜色
+        this.scene.background = new THREE.Color(0x87ceeb);
+        console.log("使用默认天空蓝色");
       }
     );
   }
@@ -301,7 +344,10 @@ export class SceneManager {
       this.scene.environment = null;
     }
     if (this.scene.background) {
-      this.scene.background.dispose();
+      // 检查background是否是Texture对象（有dispose方法）
+      if (this.scene.background.dispose && typeof this.scene.background.dispose === 'function') {
+        this.scene.background.dispose();
+      }
       this.scene.background = null;
     }
   }

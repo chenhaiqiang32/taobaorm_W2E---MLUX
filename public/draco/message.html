@@ -308,16 +308,33 @@
 
             <!-- 环境切换区域 -->
             <div class="section">
-                <h2>🌍 HDR环境切换</h2>
+                <h2>🌍 环境切换</h2>
                 <div class="form-group">
-                    <label for="hdrPreset">选择环境预设:</label>
-                    <select id="hdrPreset">
-                        <option value="royal_esplanade">Royal Esplanade - 皇家大道黄昏</option>
-                        <option value="dutch_sky">Dutch Sky - 荷兰天空</option>
-                        <option value="la_downtown">LA Downtown - 洛杉矶市中心</option>
-                        <option value="venice_sunset">Venice Sunset - 威尼斯日落</option>
-                        <option value="bg">Background - 背景天空</option>
-                        <option value="sunny2">Sunny 2 - 晴朗天空 2</option>
+                    <label for="environmentType">环境类型:</label>
+                    <select id="environmentType" onchange="updatePresetOptions()">
+                        <option value="hdr">HDR 环境贴图</option>
+                        <option value="room">Room 环境</option>
+                        <option value="background">普通背景图</option>
+                        <option value="default">默认天空色</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="environmentPreset">环境预设:</label>
+                    <select id="environmentPreset">
+                        <!-- HDR选项 -->
+                        <option value="royal_esplanade" data-type="hdr">Royal Esplanade - 皇家大道黄昏</option>
+                        <option value="dutch_sky" data-type="hdr">Dutch Sky - 荷兰天空</option>
+                        <option value="la_downtown" data-type="hdr">LA Downtown - 洛杉矶市中心</option>
+                        <option value="venice_sunset" data-type="hdr">Venice Sunset - 威尼斯日落</option>
+                        <option value="bg" data-type="hdr">Background - 背景天空</option>
+                        <option value="sunny2" data-type="hdr">Sunny 2 - 晴朗天空 2</option>
+                        <!-- Room选项 -->
+                        <option value="room" data-type="room" style="display:none;">Room Environment</option>
+                        <!-- 背景图选项 -->
+                        <option value="sunny" data-type="background" style="display:none;">Sunny - 晴朗天空</option>
+                        <option value="sunny2" data-type="background" style="display:none;">Sunny 2 - 晴朗天空 2</option>
+                        <!-- 默认选项 -->
+                        <option value="default" data-type="default" style="display:none;">Default Sky Color</option>
                     </select>
                 </div>
                 <div class="button-group">
@@ -393,6 +410,11 @@
             if (event.origin !== CONFIG.iframeUrl) {
                 return;
             }
+        });
+
+        // 初始化环境预设选项
+        window.addEventListener('DOMContentLoaded', function() {
+            updatePresetOptions();
         });
 
         // 发送多设备数据
@@ -514,10 +536,36 @@
             }
         }
 
+        // 更新预设选项显示
+        function updatePresetOptions() {
+            const typeSelect = document.getElementById('environmentType');
+            const presetSelect = document.getElementById('environmentPreset');
+            const selectedType = typeSelect.value;
+            
+            // 隐藏所有选项
+            Array.from(presetSelect.options).forEach(option => {
+                option.style.display = 'none';
+            });
+            
+            // 显示匹配类型的选项
+            Array.from(presetSelect.options).forEach(option => {
+                if (option.dataset.type === selectedType) {
+                    option.style.display = '';
+                }
+            });
+            
+            // 自动选择第一个可见选项
+            const visibleOptions = Array.from(presetSelect.options).filter(opt => opt.style.display !== 'none');
+            if (visibleOptions.length > 0) {
+                presetSelect.value = visibleOptions[0].value;
+            }
+        }
+
         // 发送环境切换消息
         function sendEnvironmentSwitch() {
             try {
-                const presetId = document.getElementById('hdrPreset').value;
+                const presetId = document.getElementById('environmentPreset').value;
+                const presetType = document.getElementById('environmentType').value;
                 
                 if (!presetId) {
                     throw new Error('请选择环境预设');
@@ -525,7 +573,8 @@
                 
                 // 构建环境切换数据
                 const environmentData = {
-                    presetId: presetId
+                    presetId: presetId,
+                    presetType: presetType
                 };
                 
                 console.log('🌍 发送环境切换消息:', environmentData);

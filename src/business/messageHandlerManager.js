@@ -10,7 +10,7 @@ import { robotArmManager } from './robotArmManager.js';
 import { pathManager } from './pathManager.js';
 import { movementController } from './movementController.js';
 // 导入环境配置
-import { getHDRPresetById, getAvailableHDRPresets } from '../assets/enviromentConfig.js';
+import { getHDRPresetById, getAvailableHDRPresets, getEnvironmentPresetByIdAndType } from '../assets/enviromentConfig.js';
 
 /**
  * 消息处理器管理器类
@@ -352,7 +352,7 @@ export class MessageHandlerManager {
         throw new Error('缺少或无效的presetId参数');
       }
       
-      const { presetId } = data;
+      const { presetId, presetType } = data;
       
       // 检查场景管理器是否存在
       if (!this.sceneManager) {
@@ -360,16 +360,14 @@ export class MessageHandlerManager {
         throw new Error('场景管理器未设置');
       }
       
-      // 获取HDR预设
-      const preset = getHDRPresetById(presetId);
+      // 根据类型和ID获取环境预设
+      const preset = getEnvironmentPresetByIdAndType(presetId, presetType);
       if (!preset) {
-        console.error(`❌ HDR预设 ${presetId} 不存在`);
-        const availablePresets = getAvailableHDRPresets();
-        console.log(`📋 可用的HDR预设: [${availablePresets.map(p => p.id).join(', ')}]`);
-        throw new Error(`HDR预设 ${presetId} 不存在`);
+        console.error(`❌ 环境预设 ${presetId} (类型: ${presetType}) 不存在`);
+        throw new Error(`环境预设 ${presetId} (类型: ${presetType}) 不存在`);
       }
       
-      console.log(`🌍 切换到HDR预设: ${preset.name} (${preset.description})`);
+      console.log(`🌍 切换到环境预设: ${preset.name} (${preset.description})`);
       
       // 更新场景环境配置
       const success = this.sceneManager.updateEnvironmentConfig(preset);
@@ -381,6 +379,7 @@ export class MessageHandlerManager {
           message: `环境已切换至: ${preset.name}`,
           data: {
             presetId: preset.id,
+            presetType: preset.type,
             presetName: preset.name,
             presetDescription: preset.description
           }

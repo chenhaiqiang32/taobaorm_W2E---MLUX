@@ -204,13 +204,17 @@ export function validateEnvironmentConfig(config) {
     errors.push('环境类型不能为空');
   }
   
-  const validTypes = ['room', 'hdr', 'default', 'none'];
+  const validTypes = ['room', 'hdr', 'background', 'default', 'none'];
   if (config.type && !validTypes.includes(config.type)) {
     errors.push(`无效的环境类型: ${config.type}，支持的类型: ${validTypes.join(', ')}`);
   }
   
   if (config.type === 'hdr' && !config.hdrPath) {
     errors.push('HDR 环境需要指定 hdrPath');
+  }
+  
+  if (config.type === 'background' && !config.background?.path) {
+    errors.push('背景纹理环境需要指定 background.path');
   }
   
   if (config.intensity !== undefined && (config.intensity < 0 || config.intensity > 10)) {
@@ -262,6 +266,62 @@ export function getAvailableEnvironmentPresets() {
  */
 export function getHDRPresetById(presetId) {
   return availableHDRPresets.find(preset => preset.id === presetId) || null;
+}
+
+/**
+ * 根据ID和类型获取环境预设
+ * @param {string} presetId - 预设ID
+ * @param {string} presetType - 预设类型 (hdr/room/background/default)
+ * @returns {Object|null} 环境预设配置
+ */
+export function getEnvironmentPresetByIdAndType(presetId, presetType) {
+  // HDR类型
+  if (presetType === 'hdr') {
+    return getHDRPresetById(presetId);
+  }
+  
+  // Room类型
+  if (presetType === 'room') {
+    return environmentPresets.room;
+  }
+  
+  // 普通背景纹理类型
+  if (presetType === 'background') {
+    const backgroundTextures = [
+      {
+        id: 'sunny',
+        name: 'Sunny',
+        description: '晴朗天空',
+        type: 'background',
+        enabled: true,
+        background: {
+          type: 'texture',
+          path: './sunny.jpg'
+        },
+        intensity: 1.0
+      },
+      {
+        id: 'sunny2',
+        name: 'Sunny 2',
+        description: '晴朗天空 2',
+        type: 'background',
+        enabled: true,
+        background: {
+          type: 'texture',
+          path: './sunny2.jpg'
+        },
+        intensity: 1.0
+      }
+    ];
+    return backgroundTextures.find(preset => preset.id === presetId) || null;
+  }
+  
+  // 默认环境类型
+  if (presetType === 'default') {
+    return environmentPresets.default;
+  }
+  
+  return null;
 }
 
 /**
