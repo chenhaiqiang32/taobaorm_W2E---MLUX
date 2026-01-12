@@ -9,6 +9,8 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { SSAARenderPass } from 'three/examples/jsm/postprocessing/SSAARenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { POSTPROCESSING_CONFIG } from '../assets/postprocessingConfig.js';
 
 export class PostprocessingManager {
@@ -25,11 +27,11 @@ export class PostprocessingManager {
     // 当前高亮的对象
     this.currentHighlightedObjects = [];
     
-    // 抗锯齿配置
+    // 从配置文件读取抗锯齿配置
     this.antialiasConfig = {
-      enabled: true,
-      type: 'SMAA', // 'SMAA', 'SSAA', 'none'
-      quality: 'high' // 'low', 'medium', 'high'
+      enabled: POSTPROCESSING_CONFIG.antialias?.enabled ?? true,
+      type: POSTPROCESSING_CONFIG.antialias?.type ?? 'SMAA', // 'SMAA', 'FXAA', 'SSAA', 'none'
+      quality: POSTPROCESSING_CONFIG.antialias?.quality ?? 'high' // 'low', 'medium', 'high'
     };
     
     // 使用配置文件中的默认配置
@@ -53,6 +55,11 @@ export class PostprocessingManager {
     
     // 合并配置
     this.config = { ...this.defaultConfig, ...config };
+    
+    // 更新抗锯齿配置（使用合并后的配置）
+    if (this.config.antialias) {
+      this.antialiasConfig = { ...this.antialiasConfig, ...this.config.antialias };
+    }
     
     // 创建效果合成器
     this.composer = new EffectComposer(renderer);
@@ -98,7 +105,18 @@ export class PostprocessingManager {
             window.innerWidth,
             window.innerHeight
           );
-          console.log('✅ SMAA抗锯齿通道已创建');
+          console.log('✅ SMAA抗锯齿通道已创建 (高质量)');
+          break;
+          
+        case 'FXAA':
+          // 创建FXAA着色器通道
+          const fxaaPass = new ShaderPass(FXAAShader);
+          // 设置FXAA分辨率
+          const pixelRatio = this.renderer.getPixelRatio();
+          fxaaPass.material.uniforms['resolution'].value.x = 1 / (window.innerWidth * pixelRatio);
+          fxaaPass.material.uniforms['resolution'].value.y = 1 / (window.innerHeight * pixelRatio);
+          this.antialiasPass = fxaaPass;
+          console.log('✅ FXAA抗锯齿通道已创建');
           break;
           
         case 'SSAA':
@@ -114,6 +132,7 @@ export class PostprocessingManager {
       
       // 添加到合成器的最后（在轮廓效果之后）
       this.composer.addPass(this.antialiasPass);
+      console.log(`🎯 抗锯齿类型: ${type}, 质量: ${quality}`);
       
     } catch (error) {
       console.warn('⚠️ 创建抗锯齿通道失败:', error);
@@ -304,11 +323,20 @@ export class PostprocessingManager {
       this.outlinePass.setSize(width, height);
     }
     
-    // 重新创建抗锯齿通道以适应新尺寸
+    // 更新抗锯齿通道尺寸
     if (this.antialiasPass) {
-      this.composer.removePass(this.antialiasPass);
-      this.antialiasPass = null;
-      this.createAntialiasPass();
+      // 检查是否是FXAA（ShaderPass）
+      if (this.antialiasPass.material && this.antialiasPass.material.uniforms && this.antialiasPass.material.uniforms['resolution']) {
+        // FXAA需要更新分辨率uniform
+        const pixelRatio = this.renderer.getPixelRatio();
+        this.antialiasPass.material.uniforms['resolution'].value.x = 1 / (width * pixelRatio);
+        this.antialiasPass.material.uniforms['resolution'].value.y = 1 / (height * pixelRatio);
+      } else {
+        // SMAA或其他类型需要重新创建
+        this.composer.removePass(this.antialiasPass);
+        this.antialiasPass = null;
+        this.createAntialiasPass();
+      }
     }
     
     console.log(`📐 后处理管理器大小已调整: ${width}x${height}`);

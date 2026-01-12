@@ -10,7 +10,7 @@ export const POSTPROCESSING_CONFIG = {
   // 抗锯齿配置
   antialias: {
     enabled: true,
-    type: 'SMAA', // 'SMAA', 'SSAA', 'none'
+    type: 'FXAA', // 'SMAA', 'FXAA', 'SSAA', 'none'
     quality: 'high' // 'low', 'medium', 'high'
   },
 
@@ -324,7 +324,7 @@ export function getAntialiasConfig() {
  * @returns {Array} 抗锯齿类型数组
  */
 export function getAvailableAntialiasTypes() {
-  return ['SMAA', 'SSAA', 'none'];
+  return ['SMAA', 'FXAA', 'SSAA', 'none'];
 }
 
 /**
@@ -338,7 +338,7 @@ export function validateAntialiasConfig(config) {
   
   // 检查类型
   const validTypes = getAvailableAntialiasTypes();
-  if (!validTypes.includes(config.type)) {
+  if (config.type && !validTypes.includes(config.type)) {
     errors.push(`type 必须是以下之一: ${validTypes.join(', ')}`);
   }
   

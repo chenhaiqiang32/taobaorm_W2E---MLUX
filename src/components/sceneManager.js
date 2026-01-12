@@ -41,13 +41,22 @@ export class SceneManager {
     // 创建场景
     this.scene = new THREE.Scene();
 
-    // 创建渲染器
-    this.renderer = new THREE.WebGLRenderer({ antialias: enableAntialias });
+    // 创建渲染器，启用抗锯齿
+    this.renderer = new THREE.WebGLRenderer({ 
+      antialias: enableAntialias,
+      powerPreference: "high-performance",
+      stencil: false,
+      depth: true,
+      logarithmicDepthBuffer: false
+    });
     this.renderer.setSize(width, height);
     this.renderer.shadowMap.enabled = enableShadows;
 
-    // 设置设备像素比，提高渲染质量
-    this.renderer.setPixelRatio(window.devicePixelRatio);
+    // 设置设备像素比，提高渲染质量（限制最大值为2，平衡质量和性能）
+    const maxPixelRatio = 3;
+    const pixelRatio = Math.min(window.devicePixelRatio, maxPixelRatio);
+    this.renderer.setPixelRatio(pixelRatio);
+    console.log(`📐 渲染器像素比设置为: ${pixelRatio} (设备像素比: ${window.devicePixelRatio})`);
 
     if (enableShadows) {
       // 启用更高质量的阴影
@@ -56,6 +65,14 @@ export class SceneManager {
 
     // 启用更高质量的纹理过滤
     this.renderer.physicallyCorrectLights = true;
+    
+    // 优化输出编码和色调映射
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
+    
+    // 启用更高质量的渲染设置
+    this.renderer.sortObjects = true;
 
     // 更新环境配置
     this.updateEnvironmentConfig(environment);
