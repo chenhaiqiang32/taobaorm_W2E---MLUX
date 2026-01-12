@@ -6,6 +6,9 @@ import { modelPaths, modelNames } from "./src/assets/modelList.js";
 import config from "./src/assets/config.js";
 import { sceneAnalyzer, robotArmManager, pathManager } from "./src/business/index.js";
 
+// 存储 glb_tex 模型的材质，用于材质流动效果
+export let glbTexMaterials = [];
+
 export function loadModel(scene, modelIndex = 0) {
   return new Promise((resolve, reject) => {
     // 检查模型索引是否有效
@@ -479,6 +482,49 @@ export async function analyzeLineModel(models) {
   }
   
   console.log(`✅ 找到line模型数据，模型名称: line`);
+  
+  // 查找 glb_tex 模型并收集其材质
+  const glbTexModelIndex = modelNames.indexOf('glb_tex');
+  if (glbTexModelIndex !== -1) {
+    const glbTexModelData = models[glbTexModelIndex];
+    if (glbTexModelData && glbTexModelData.model) {
+      console.log('🎨 开始收集 glb_tex 模型的材质...');
+      glbTexMaterials = [];
+      
+      glbTexModelData.model.traverse((child) => {
+        if (child.isMesh && child.material) {
+          // 处理单个材质
+          if (child.material.map) {
+            // 确保纹理可以重复
+            child.material.map.wrapS = THREE.RepeatWrapping;
+            child.material.map.wrapT = THREE.RepeatWrapping;
+            glbTexMaterials.push({
+              material: child.material,
+              map: child.material.map
+            });
+            console.log(`  ✅ 找到材质，纹理: ${child.material.map.image ? child.material.map.image.src : 'N/A'}`);
+          }
+          
+          // 处理材质数组
+          if (Array.isArray(child.material)) {
+            child.material.forEach((mat) => {
+              if (mat && mat.map) {
+                mat.map.wrapS = THREE.RepeatWrapping;
+                mat.map.wrapT = THREE.RepeatWrapping;
+                glbTexMaterials.push({
+                  material: mat,
+                  map: mat.map
+                });
+                console.log(`  ✅ 找到材质（数组），纹理: ${mat.map.image ? mat.map.image.src : 'N/A'}`);
+              }
+            });
+          }
+        }
+      });
+      
+      console.log(`🎨 共收集到 ${glbTexMaterials.length} 个材质用于流动效果`);
+    }
+  }
   
   try {
     // 检查是否为OBJ文件

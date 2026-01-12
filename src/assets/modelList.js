@@ -7,7 +7,8 @@
 export const modelFiles = [
   "equipment.glb",
   "line.obj",
-  "structure.glb"
+  "structure.glb",
+  "glb_tex.glb"
 ];
 
 // 模型访问路径数组（包含相对路径）
@@ -16,7 +17,8 @@ export const modelFiles = [
 export const modelPaths = [
   "./models/equipment.glb",
   "./models/line.obj",
-  "./models/structure.glb"
+  "./models/structure.glb",
+  "./models/glb_tex.glb"
 ];
 
 // 模型总数
@@ -28,5 +30,6 @@ export const modelCount = 3;
 export const modelNames = [
   "equipment",
   "line",
-  "structure"
+  "structure",
+  "glb_tex"
 ];

@@ -3,6 +3,7 @@ import {
   loadAllModels,
   autoSetupCameraAndControls,
   getAvailableModels,
+  glbTexMaterials,
 } from "./modelLoader.js";
 import BoxModel from "./src/components/boxModel.js";
 
@@ -411,6 +412,19 @@ function animate(time) {
   // 更新地面效果动画
   if (groundEffect) {
     groundEffect.update(time * 0.001);
+  }
+
+  // 更新 glb_tex 模型的材质流动效果
+  if (glbTexMaterials && glbTexMaterials.length > 0) {
+    glbTexMaterials.forEach(({ map }) => {
+      if (map && map.offset) {
+        map.offset.x -= 0.01;
+        // // 如果偏移量超出范围，可以重置以保持循环效果
+        // if (map.offset.x <= -1) {
+        //   map.offset.x += 1;
+        // }
+      }
+    });
   }
 
   // 更新动画
