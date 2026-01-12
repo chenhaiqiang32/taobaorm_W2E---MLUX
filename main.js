@@ -455,20 +455,164 @@ function animate(time) {
 }
 
 /**
+ * 显示WebGL错误信息
+ * @param {Error} error - 错误对象
+ */
+function showWebGLError(error) {
+  // 创建错误容器
+  const errorContainer = document.createElement('div');
+  errorContainer.id = 'webgl-error-container';
+  errorContainer.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    padding: 20px;
+    box-sizing: border-box;
+  `;
+
+  const errorIcon = document.createElement('div');
+  errorIcon.innerHTML = '⚠️';
+  errorIcon.style.cssText = `
+    font-size: 64px;
+    margin-bottom: 20px;
+  `;
+
+  const errorTitle = document.createElement('h1');
+  errorTitle.textContent = 'WebGL 不可用';
+  errorTitle.style.cssText = `
+    font-size: 32px;
+    margin: 0 0 20px 0;
+    font-weight: 600;
+    text-align: center;
+  `;
+
+  const errorMessage = document.createElement('p');
+  errorMessage.textContent = error.message || '无法初始化WebGL渲染器';
+  errorMessage.style.cssText = `
+    font-size: 18px;
+    margin: 0 0 30px 0;
+    text-align: center;
+    max-width: 600px;
+    line-height: 1.6;
+    opacity: 0.9;
+  `;
+
+  const errorSuggestions = document.createElement('div');
+  errorSuggestions.style.cssText = `
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 600px;
+    margin-bottom: 30px;
+  `;
+
+  const suggestionsTitle = document.createElement('h2');
+  suggestionsTitle.textContent = '解决方案：';
+  suggestionsTitle.style.cssText = `
+    font-size: 20px;
+    margin: 0 0 15px 0;
+    font-weight: 600;
+  `;
+
+  const suggestionsList = document.createElement('ul');
+  suggestionsList.style.cssText = `
+    margin: 0;
+    padding-left: 25px;
+    line-height: 2;
+    font-size: 16px;
+  `;
+
+  const suggestions = [
+    '更新您的浏览器到最新版本',
+    '检查浏览器设置中是否启用了硬件加速',
+    '更新您的显卡驱动程序',
+    '尝试使用其他浏览器（Chrome、Firefox、Edge等）',
+    '检查系统是否有足够的图形资源'
+  ];
+
+  suggestions.forEach(suggestion => {
+    const li = document.createElement('li');
+    li.textContent = suggestion;
+    suggestionsList.appendChild(li);
+  });
+
+  errorSuggestions.appendChild(suggestionsTitle);
+  errorSuggestions.appendChild(suggestionsList);
+
+  const refreshButton = document.createElement('button');
+  refreshButton.textContent = '刷新页面';
+  refreshButton.style.cssText = `
+    background: white;
+    color: #667eea;
+    border: none;
+    padding: 12px 30px;
+    font-size: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+  `;
+  refreshButton.addEventListener('click', () => {
+    window.location.reload();
+  });
+  refreshButton.addEventListener('mouseenter', () => {
+    refreshButton.style.transform = 'translateY(-2px)';
+    refreshButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+  });
+  refreshButton.addEventListener('mouseleave', () => {
+    refreshButton.style.transform = 'translateY(0)';
+    refreshButton.style.boxShadow = 'none';
+  });
+
+  errorContainer.appendChild(errorIcon);
+  errorContainer.appendChild(errorTitle);
+  errorContainer.appendChild(errorMessage);
+  errorContainer.appendChild(errorSuggestions);
+  errorContainer.appendChild(refreshButton);
+
+  document.body.appendChild(errorContainer);
+}
+
+/**
  * 主函数
  */
 function main() {
-  // 初始化场景
-  const { scene, renderer } = initScene();
+  try {
+    // 初始化场景
+    const { scene, renderer } = initScene();
 
-  // 设置模型和场景
-  setupModelAndScene(scene);
+    // 设置模型和场景
+    setupModelAndScene(scene);
 
-  // 设置事件监听器
-  setupEventListeners(renderer);
+    // 设置事件监听器
+    setupEventListeners(renderer);
 
-  // 开始动画循环
-  animate();
+    // 开始动画循环
+    animate();
+  } catch (error) {
+    console.error('应用初始化失败:', error);
+    
+    // 检查是否是WebGL相关错误
+    if (error.name === 'WebGLNotAvailableError' || 
+        error.name === 'WebGLRendererCreationError' ||
+        error.message.includes('WebGL') ||
+        error.message.includes('webgl')) {
+      showWebGLError(error);
+    } else {
+      // 其他错误也显示，但使用通用错误信息
+      showWebGLError(new Error('应用初始化失败: ' + error.message));
+    }
+  }
 }
 
 // 启动应用

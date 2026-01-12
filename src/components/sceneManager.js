@@ -21,6 +21,46 @@ export class SceneManager {
   }
 
   /**
+   * 检查WebGL是否可用
+   * @returns {Object} {available: boolean, error: string|null}
+   */
+  checkWebGLAvailability() {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      
+      if (!gl) {
+        return {
+          available: false,
+          error: 'WebGL is not supported in your browser or is disabled. Please enable WebGL or use a modern browser.'
+        };
+      }
+
+      // 检查WebGL上下文是否有效
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      if (debugInfo) {
+        const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+        const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        
+        // 检查是否被禁用
+        if (vendor === 'Disabled' || renderer === 'Disabled') {
+          return {
+            available: false,
+            error: 'WebGL is disabled in your browser or graphics driver. Please enable hardware acceleration.'
+          };
+        }
+      }
+
+      return { available: true, error: null };
+    } catch (error) {
+      return {
+        available: false,
+        error: `WebGL check failed: ${error.message}`
+      };
+    }
+  }
+
+  /**
    * 初始化场景
    * @param {Object} options - 配置选项
    * @param {number} options.width - 渲染器宽度
@@ -28,6 +68,7 @@ export class SceneManager {
    * @param {boolean} options.enableShadows - 是否启用阴影
    * @param {boolean} options.enableAntialias - 是否启用抗锯齿
    * @param {Object} options.environment - 环境贴图配置
+   * @throws {Error} 如果WebGL不可用或创建渲染器失败
    */
   init(options = {}) {
     const {
@@ -38,17 +79,45 @@ export class SceneManager {
       environment = {},
     } = options;
 
+    // 检查WebGL可用性
+    const webglCheck = this.checkWebGLAvailability();
+    if (!webglCheck.available) {
+      const error = new Error(webglCheck.error || 'WebGL is not available');
+      error.name = 'WebGLNotAvailableError';
+      throw error;
+    }
+
     // 创建场景
     this.scene = new THREE.Scene();
 
     // 创建渲染器，启用抗锯齿
-    this.renderer = new THREE.WebGLRenderer({ 
-      antialias: enableAntialias,
-      powerPreference: "high-performance",
-      stencil: false,
-      depth: true,
-      logarithmicDepthBuffer: false
-    });
+    try {
+      this.renderer = new THREE.WebGLRenderer({ 
+        antialias: enableAntialias,
+        powerPreference: "high-performance",
+        stencil: false,
+        depth: true,
+        logarithmicDepthBuffer: false
+      });
+
+      // 检查渲染器是否成功创建（通过检查上下文）
+      if (!this.renderer.getContext()) {
+        throw new Error('Failed to create WebGL context. The renderer context is null.');
+      }
+    } catch (error) {
+      // 清理场景
+      if (this.scene) {
+        this.scene = null;
+      }
+      
+      // 包装错误信息
+      const renderError = new Error(
+        error.message || 'Failed to create WebGL renderer. WebGL may be disabled or not supported.'
+      );
+      renderError.name = 'WebGLRendererCreationError';
+      renderError.originalError = error;
+      throw renderError;
+    }
     this.renderer.setSize(width, height);
     this.renderer.shadowMap.enabled = enableShadows;
 
